@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  CUSTOMER
+  AGENT
+  ADMIN
+}
+
+enum CustomerType {
+  RESIDENTIAL
+  COMMERCIAL
+  INDUSTRIAL
+  EPC
+  CHANNEL_PARTNER
+}
+
+enum ComplaintStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
+}
+
+enum GridType {
+  ON_GRID
+  OFF_GRID
+}
+
+enum DefectType {
+  TECHNICAL_FAULT
+  TRANSIT_BREAKAGE
+}
+
+enum DeliveryMode {
+  ON_ROAD
+  BY_AIR
+  BY_SEA
+}
+
+enum AttachmentKind {
+  INVOICE
+  EVIDENCE
+}
+
+model User {
+  id               String        @id @default(cuid())
+  name             String
+  email            String        @unique
+  phone            String
+  altPhone         String?
+  company          String?
+  customerType     CustomerType  @default(RESIDENTIAL)
+  houseNo          String        @default("")
+  street           String        @default("")
+  pincode          String        @default("")
+  state            String        @default("")
+  district         String        @default("")
+  city             String        @default("")
+  passwordHash     String
+  role             Role          @default(CUSTOMER)
+  failedAttempts   Int           @default(0)
+  lockedUntil      DateTime?
+  resetToken       String?       @unique
+  resetTokenExpiry DateTime?
+  createdAt        DateTime      @default(now())
+  complaints       Complaint[]
+  assigned         Complaint[]   @relation("AssignedAgent")
+  notes            InternalNote[]
+}
+
+model DailyCounter {
+  date    String @id // "DDMMYYYY"
+  counter Int    @default(0)
+}
+
+model Complaint {
+  id          Int             @id @default(autoincrement())
+  complaintId String          @unique // PEDDMMYYYYNN
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
+  status      ComplaintStatus @default(SUBMITTED)
+  assignedToId String?
+  assignedTo  User?           @relation("AssignedAgent", fields: [assignedToId], references: [id])
+
+  // Site details
+  siteAddress      String
+  siteCapacityKwp  Float
+  gridType         GridType
+  commissionedDate DateTime
+  invoiceNumber    String
+
+  // Module details
+  serialNumbers String[]
+  moduleModel   String?
+  wpRating      Float
+  defectiveQty  Int
+
+  // Defect report (nullable variant columns per defectType)
+  defectType          DefectType
+  description         String
+  defectNoticedDate   DateTime?
+  technicianInspected Boolean?
+  technicianFindings  String?
+  receivedDate        DateTime?
+  deliveryMode        DeliveryMode?
+  vehicleNumber       String?
+  transporterName     String?
+  unloadingMode       String?
+
+  attachments  Attachment[]
+  statusEvents StatusEvent[]
+  internalNotes InternalNote[]
+  createdAt    DateTime      @default(now())
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Attachment {
+  id           String         @id @default(cuid())
+  complaintId  Int
+  complaint    Complaint      @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  kind         AttachmentKind
+  storagePath  String
+  thumbPath    String?
+  mimeType     String
+  sizeBytes    Int
+  originalName String
+  createdAt    DateTime       @default(now())
+}
+
+model StatusEvent {
+  id          String          @id @default(cuid())
+  complaintId Int
+  complaint   Complaint       @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  status      ComplaintStatus
+  note        String?
+  createdById String?
+  createdAt   DateTime        @default(now())
+}
+
+model InternalNote {
+  id          String    @id @default(cuid())
+  complaintId Int
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User      @relation(fields: [authorId], references: [id])
+  body        String
+  createdAt   DateTime  @default(now())
+}
