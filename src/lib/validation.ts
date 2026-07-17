@@ -52,11 +52,17 @@ export const loginSchema = z.object({
 
 // --- Complaint wizard ---
 
+const pastDate = () =>
+  z.coerce
+    .date()
+    .refine((d) => !isNaN(d.getTime()), "Enter a valid date")
+    .refine((d) => d <= new Date(), "Cannot be in the future");
+
 export const siteSchema = z.object({
   siteAddress: z.string().trim().min(10, "Enter the full site address"),
   siteCapacityKwp: z.coerce.number().positive("Must be greater than 0"),
   gridType: z.enum(["ON_GRID", "OFF_GRID"]),
-  commissionedDate: z.coerce.date().max(new Date(), "Cannot be in the future"),
+  commissionedDate: pastDate(),
   invoiceNumber: z.string().trim().min(2, "Invoice number is required"),
 });
 
@@ -73,14 +79,14 @@ export const defectSchema = z.discriminatedUnion("defectType", [
   z.object({
     defectType: z.literal("TECHNICAL_FAULT"),
     description: z.string().trim().min(50, "Describe the problem in at least 50 characters"),
-    defectNoticedDate: z.coerce.date().max(new Date(), "Cannot be in the future"),
-    technicianInspected: z.coerce.boolean(),
+    defectNoticedDate: pastDate(),
+    technicianInspected: z.preprocess((v) => v === true || v === "true", z.boolean()),
     technicianFindings: z.string().trim().optional(),
   }),
   z.object({
     defectType: z.literal("TRANSIT_BREAKAGE"),
     description: z.string().trim().min(50, "Describe the breakage in at least 50 characters"),
-    receivedDate: z.coerce.date().max(new Date(), "Cannot be in the future"),
+    receivedDate: pastDate(),
     deliveryMode: z.enum(["ON_ROAD", "BY_AIR", "BY_SEA"]),
     vehicleNumber: z.string().trim().min(3, "Required"),
     transporterName: z.string().trim().min(2, "Required"),
@@ -97,17 +103,16 @@ const attachmentMeta = z.object({
   originalName: z.string().min(1),
 });
 
+export const attachmentsRelaxedSchema = z.array(attachmentMeta).max(11); // 10 evidence + 1 invoice
+
 export const complaintSchema = z.object({
   site: siteSchema,
   modules: modulesSchema,
   defect: defectSchema,
-  attachments: z
-    .array(attachmentMeta)
-    .max(11) // 10 evidence + 1 invoice
-    .refine(
-      (a) => a.some((f) => f.kind === "EVIDENCE" && f.mimeType.startsWith("image/")),
-      "At least one evidence image is required",
-    ),
+  attachments: attachmentsRelaxedSchema.refine(
+    (a) => a.some((f) => f.kind === "EVIDENCE" && f.mimeType.startsWith("image/")),
+    "At least one evidence image is required",
+  ),
 });
 
 export type ComplaintInput = z.infer<typeof complaintSchema>;
