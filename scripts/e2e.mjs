@@ -103,8 +103,9 @@ r = await get(`/track?id=${id1}`);
 check("public tracker finds complaint", r.status === 200 && r.body.includes(id1) && r.body.includes("Technical Fault"));
 r = await get("/track?id=PE0101202099");
 check("tracker handles unknown ID", r.body.includes("No complaint found"));
+const storageOn = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
 r = await get("/api/upload-url");
-check("upload-url reports storage unconfigured", r.body.includes('"configured":false'));
+check("upload-url reports storage state", r.body.includes(`"configured":${storageOn}`));
 
 // --- auth gating ---
 r = await get("/dashboard");
@@ -139,7 +140,10 @@ check("CSV export contains data", r.status === 200 && r.body.includes(id1) && r.
 r = await get("/api/admin/export");
 check("CSV export requires staff", r.status === 401);
 r = await get(`/api/admin/zip/${id1}`, adminTok);
-check("ZIP route responds (503 storage off)", r.status === 503);
+check(
+  storageOn ? "ZIP route 404 (no attachments)" : "ZIP route 503 (storage off)",
+  r.status === (storageOn ? 404 : 503),
+);
 
 // --- status update side-effects (direct DB, mirrors updateStatusAction write) ---
 await db.complaint.update({
