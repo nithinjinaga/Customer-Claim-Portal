@@ -5,7 +5,7 @@ import { useState } from "react";
 export type GalleryItem = {
   url: string | null;
   thumbUrl: string | null;
-  isImage: boolean;
+  kind: "image" | "video" | "file";
   name: string;
   size: string;
 };
@@ -18,7 +18,7 @@ export default function Gallery({ items }: { items: GalleryItem[] }) {
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {items.map((item) => (
           <li key={item.name + item.size} className="overflow-hidden rounded-card border border-line">
-            {item.isImage && item.url ? (
+            {item.kind === "image" && item.url ? (
               <button
                 type="button"
                 onClick={() => setOpen(item)}
@@ -32,11 +32,21 @@ export default function Gallery({ items }: { items: GalleryItem[] }) {
                   className="h-28 w-full object-cover"
                 />
               </button>
-            ) : !item.isImage && item.url ? (
+            ) : item.kind === "video" && item.url ? (
               <video src={item.url} controls preload="metadata" className="h-28 w-full bg-black object-contain" />
+            ) : item.kind === "file" && item.url ? (
+              <a
+                href={item.url}
+                target="_blank"
+                rel="noreferrer"
+                className="flex h-28 items-center justify-center bg-surface text-3xl"
+                aria-label={`Open ${item.name}`}
+              >
+                📄
+              </a>
             ) : (
               <div className="flex h-28 items-center justify-center bg-surface text-3xl">
-                {item.isImage ? "🖼️" : "🎬"}
+                {item.kind === "image" ? "🖼️" : item.kind === "video" ? "🎬" : "📄"}
               </div>
             )}
             <div className="px-2 py-1.5">

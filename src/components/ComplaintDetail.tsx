@@ -28,7 +28,11 @@ async function toGalleryItems(attachments: Attachment[]): Promise<GalleryItem[]>
       return {
         url,
         thumbUrl,
-        isImage: a.mimeType.startsWith("image/") || a.mimeType === "application/pdf",
+        kind: a.mimeType.startsWith("image/")
+          ? ("image" as const)
+          : a.mimeType.startsWith("video/")
+            ? ("video" as const)
+            : ("file" as const),
         name: a.originalName,
         size: fmtSize(a.sizeBytes),
       };

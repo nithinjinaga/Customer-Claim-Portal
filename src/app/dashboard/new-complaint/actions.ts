@@ -11,19 +11,9 @@ import {
 } from "@/lib/email";
 import { STATUS_LABEL } from "@/components/ui";
 
-const MAX_PER_HOUR = 5;
+import { nextComplaintId } from "@/lib/complaint-id";
 
-function istDateKey() {
-  // "DDMMYYYY" in Asia/Kolkata, independent of server timezone
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Kolkata",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).formatToParts(new Date());
-  const get = (t: string) => parts.find((p) => p.type === t)!.value;
-  return `${get("day")}${get("month")}${get("year")}`;
-}
+const MAX_PER_HOUR = 5;
 
 export async function submitComplaint(
   raw: unknown,
@@ -47,14 +37,8 @@ export async function submitComplaint(
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const { site, modules, defect, attachments } = parsed.data;
 
-  const dateKey = istDateKey();
   const complaint = await db.$transaction(async (tx) => {
-    const counter = await tx.dailyCounter.upsert({
-      where: { date: dateKey },
-      create: { date: dateKey, counter: 1 },
-      update: { counter: { increment: 1 } },
-    });
-    const complaintId = `PE${dateKey}${String(counter.counter).padStart(2, "0")}`;
+    const complaintId = await nextComplaintId(tx);
     return tx.complaint.create({
       data: {
         complaintId,
