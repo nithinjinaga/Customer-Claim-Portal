@@ -111,7 +111,7 @@ export default async function ComplaintDetail({
         <Rows
           rows={[
             ["Site address", c.siteAddress],
-            ["Site capacity", `${c.siteCapacityKwp} KWp`],
+            ["Site capacity", c.siteCapacityKwp != null ? `${c.siteCapacityKwp} KWp` : "—"],
             ["Grid type", label(c.gridType)],
             ["Plant commissioned", fmtDate(c.commissionedDate)],
             ["Invoice number", c.invoiceNumber],
@@ -131,22 +131,22 @@ export default async function ComplaintDetail({
           rows={[
             ["Serial numbers", <span key="s" className="tnum">{c.serialNumbers.join(", ")}</span>],
             ["Module model", c.moduleModel],
-            ["Wp rating", `${c.wpRating} Wp`],
-            ["Defective quantity", String(c.defectiveQty)],
+            ["Wp rating", c.wpRating != null ? `${c.wpRating} Wp` : "—"],
+            ["Defective quantity", c.defectiveQty != null ? String(c.defectiveQty) : "—"],
           ]}
         />
       </Card>
 
       <Card>
         <h2 className="mb-3 text-sm font-semibold text-pe-navy">
-          Defect report — {c.defectType === "TECHNICAL_FAULT" ? "Technical Fault" : "Transit Breakage"}
+          Defect report: {c.defectType === "TECHNICAL_FAULT" ? "Technical Fault" : "Transit Breakage"}
         </h2>
         <Rows
           rows={
             c.defectType === "TECHNICAL_FAULT"
               ? [
                   ["Defect first noticed", fmtDate(c.defectNoticedDate)],
-                  ["Inspected by technician", c.technicianInspected ? "Yes" : "No"],
+                  ["Inspected by technician", c.technicianInspected == null ? "—" : c.technicianInspected ? "Yes" : "No"],
                   ...(c.technicianInspected
                     ? ([["Technician's findings", c.technicianFindings]] as [string, React.ReactNode][])
                     : []),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   IMAGE_TYPES,
   VIDEO_TYPES,
@@ -11,6 +11,14 @@ import {
   MAX_EVIDENCE_FILES,
 } from "@/lib/validation";
 import { Alert } from "@/components/ui";
+import {
+  IconUploadCloud,
+  IconImage,
+  IconVideo,
+  IconFile,
+  IconCamera,
+  IconTrash,
+} from "@/components/icons";
 
 export type AttachmentMeta = {
   kind: "INVOICE" | "EVIDENCE";
@@ -134,8 +142,16 @@ export function EvidenceUpload({
   const [error, setError] = useState<string>();
   const [storageOff, setStorageOff] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [previews, setPreviews] = useState<Record<string, string>>({});
   const inputRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
+
+  const previewsRef = useRef(previews);
+  previewsRef.current = previews;
+  useEffect(
+    () => () => Object.values(previewsRef.current).forEach(URL.revokeObjectURL),
+    [],
+  );
 
   async function handleFiles(list: FileList | File[]) {
     setError(undefined);
@@ -155,6 +171,10 @@ export function EvidenceUpload({
         const meta = await uploadFile(f, "EVIDENCE", (pct) =>
           setUploading((u) => u.map((x) => (x.name === f.name ? { ...x, pct } : x))),
         );
+        if (meta.mimeType.startsWith("image/")) {
+          const objUrl = URL.createObjectURL(f);
+          setPreviews((p) => ({ ...p, [meta.storagePath]: objUrl }));
+        }
         onChange([...files, meta]);
         files = [...files, meta]; // keep loop-local view current for multi-select
       } catch (e) {
@@ -170,7 +190,7 @@ export function EvidenceUpload({
     <div className="flex flex-col gap-3">
       {storageOff && (
         <Alert kind="info">
-          File storage is not configured yet — you can submit the complaint
+          File storage is not configured yet, so you can submit the complaint
           without attachments for now.
         </Alert>
       )}
@@ -195,6 +215,7 @@ export function EvidenceUpload({
           dragOver ? "border-pe-green bg-green-50" : "border-line bg-surface hover:border-pe-blue"
         }`}
       >
+        <IconUploadCloud className="mb-1 h-8 w-8 text-pe-blue" />
         <p className="text-sm font-medium text-ink">Drag &amp; drop files here, or click to browse</p>
         <p className="text-xs text-muted">
           Images JPG/PNG/WEBP up to 10MB · Videos MP4/MOV up to 100MB · max{" "}
@@ -226,9 +247,9 @@ export function EvidenceUpload({
       <button
         type="button"
         onClick={() => cameraRef.current?.click()}
-        className="self-start text-sm font-medium text-pe-blue hover:underline sm:hidden"
+        className="inline-flex items-center gap-1.5 self-start text-sm font-medium text-pe-blue hover:underline sm:hidden"
       >
-        📷 Take a photo
+        <IconCamera className="h-4 w-4" /> Take a photo
       </button>
 
       {uploading.map((u) => (
@@ -241,29 +262,47 @@ export function EvidenceUpload({
 
       {files.length > 0 && (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {files.map((f, i) => (
-            <li key={f.storagePath} className="relative rounded-card border border-line p-2">
-              {f.mimeType.startsWith("image/") ? (
-                <div className="flex h-20 items-center justify-center overflow-hidden rounded bg-surface text-3xl">
-                  🖼️
+          {files.map((f, i) => {
+            const isImage = f.mimeType.startsWith("image/");
+            const preview = previews[f.storagePath];
+            return (
+              <li key={f.storagePath} className="relative overflow-hidden rounded-card border border-line bg-card">
+                <div className="flex h-24 items-center justify-center overflow-hidden bg-surface">
+                  {isImage && preview ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={preview} alt={f.originalName} className="h-full w-full object-cover" />
+                  ) : isImage ? (
+                    <IconImage className="h-8 w-8 text-muted" />
+                  ) : (
+                    <IconVideo className="h-8 w-8 text-muted" />
+                  )}
                 </div>
-              ) : (
-                <div className="flex h-20 items-center justify-center rounded bg-surface text-3xl">
-                  🎬
+                <div className="px-2 py-1.5">
+                  <p className="truncate text-xs font-medium">{f.originalName}</p>
+                  <p className="tnum text-[10px] text-muted">{fmtSize(f.sizeBytes)}</p>
                 </div>
-              )}
-              <p className="mt-1 truncate text-xs font-medium">{f.originalName}</p>
-              <p className="text-[10px] text-muted">{fmtSize(f.sizeBytes)}</p>
-              <button
-                type="button"
-                aria-label={`Remove ${f.originalName}`}
-                onClick={() => onChange(files.filter((_, j) => j !== i))}
-                className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-status-rejected text-xs text-white"
-              >
-                ×
-              </button>
-            </li>
-          ))}
+                <button
+                  type="button"
+                  aria-label={`Remove ${f.originalName}`}
+                  onClick={() => {
+                    const url = previews[f.storagePath];
+                    if (url) {
+                      URL.revokeObjectURL(url);
+                      setPreviews((p) => {
+                        const next = { ...p };
+                        delete next[f.storagePath];
+                        return next;
+                      });
+                    }
+                    onChange(files.filter((_, j) => j !== i));
+                  }}
+                  className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-card/90 text-status-rejected shadow-soft transition-colors hover:bg-status-rejected hover:text-white"
+                >
+                  <IconTrash className="h-3.5 w-3.5" />
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
@@ -286,19 +325,20 @@ export function InvoiceUpload({
   return (
     <div className="flex flex-col gap-2">
       {storageOff && (
-        <Alert kind="info">Storage not configured — invoice upload skipped for now.</Alert>
+        <Alert kind="info">Storage not configured, invoice upload skipped for now.</Alert>
       )}
       {error && <Alert kind="error">{error}</Alert>}
       {file ? (
-        <div className="flex items-center justify-between gap-3 rounded-card border border-line px-3 py-2 text-sm">
-          <span className="truncate">
-            📄 {file.originalName}{" "}
-            <span className="text-xs text-muted">({fmtSize(file.sizeBytes)})</span>
+        <div className="flex items-center justify-between gap-3 rounded-card border border-line px-3 py-2.5 text-sm">
+          <span className="flex min-w-0 items-center gap-2">
+            <IconFile className="h-4 w-4 shrink-0 text-pe-blue" />
+            <span className="truncate">{file.originalName}</span>
+            <span className="shrink-0 text-xs text-muted">({fmtSize(file.sizeBytes)})</span>
           </span>
           <button
             type="button"
             onClick={() => onChange(null)}
-            className="text-xs font-medium text-status-rejected hover:underline"
+            className="shrink-0 text-xs font-medium text-status-rejected hover:underline"
           >
             Remove
           </button>

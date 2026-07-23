@@ -52,15 +52,6 @@ export async function sendEmail(to: string, subject: string, html: string) {
 
 // --- Templates ---
 
-export function welcomeEmail(name: string) {
-  return shell(
-    `Welcome, ${esc(name)}`,
-    p("Your Premier Energies Customer Service Portal account is ready.") +
-      p("Use the portal to raise complaints about your solar modules and track their resolution in real time.") +
-      button(`${appUrl()}/login`, "Log in to the portal"),
-  );
-}
-
 export function complaintConfirmationEmail(name: string, complaintId: string, summary: string) {
   return shell(
     "Complaint registered",

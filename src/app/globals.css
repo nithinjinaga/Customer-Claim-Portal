@@ -9,9 +9,10 @@
 
   --color-ink: #16232e;
   --color-muted: #5b6b7b;
-  --color-surface: #f5f7fa;
+  --color-surface: #f5f5f5;
   --color-card: #ffffff;
-  --color-line: #dbe3ea;
+  --color-line: #e5e5e5;
+  --color-input: #c4c4c4;
 
   --color-status-submitted: #2461ac;
   --color-status-review: #b45309;
@@ -19,14 +20,18 @@
   --color-status-resolved: #4e9e35;
   --color-status-rejected: #dc2626;
 
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-bebas), "Bebas Neue", ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
-  --radius-card: 6px;
+  --radius-card: 8px;
+
+  --shadow-soft: 0 1px 2px rgba(21, 64, 116, 0.04), 0 6px 20px -6px rgba(21, 64, 116, 0.12);
+  --shadow-soft-lg: 0 2px 6px rgba(21, 64, 116, 0.06), 0 18px 44px -12px rgba(21, 64, 116, 0.2);
 }
 
 body {
-  background: var(--color-surface);
+  background: #ffffff;
   color: var(--color-ink);
   font-family: var(--font-sans);
 }
@@ -36,8 +41,234 @@ h2,
 h3 {
   text-wrap: balance;
   color: var(--color-pe-navy);
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  line-height: 1;
 }
 
 .tnum {
   font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Landing hero — imported from Claude Design "solar-hero". Kept as scoped CSS
+   (multi-stop scrim + parallax layers) rather than Tailwind arbitrary values. */
+.hero {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  min-height: 60vh;
+  overflow: hidden;
+  background: #0d2440;
+}
+.hero__bg {
+  position: absolute;
+  inset: -120px;
+  z-index: 0;
+  background-image: url("/solar-hero.webp");
+  background-size: cover;
+  background-position: center;
+  will-change: transform;
+}
+.hero__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    100deg,
+    rgba(13, 36, 64, 0.92) 0%,
+    rgba(13, 36, 64, 0.7) 38%,
+    rgba(13, 36, 64, 0.15) 72%,
+    rgba(13, 36, 64, 0) 100%
+  );
+}
+.hero__copy {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 46%;
+  padding: 56px;
+  will-change: transform;
+}
+.hero__eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #7fd15f;
+}
+.hero__title {
+  margin: 12px 0 0;
+  color: #fff;
+  font-family: var(--font-bebas), "Bebas Neue", system-ui, sans-serif;
+  font-weight: 400;
+  letter-spacing: 1.5px;
+  line-height: 1;
+  font-size: 56px;
+}
+.hero__lede {
+  margin: 18px 0 0;
+  max-width: 400px;
+  font-size: 14px;
+  line-height: 24px;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+/* Copyright overlaid on the hero (landing only); the shared white footer is
+   hidden on this page via `body:has(.hero) > footer` below. */
+.hero__footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 24px;
+  padding: 16px 56px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  background: linear-gradient(to top, rgba(13, 36, 64, 0.6), rgba(13, 36, 64, 0));
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.72);
+}
+body:has(.hero) > footer {
+  display: none;
+}
+/* Landing page is Home — hide the header Home button there (only .hero page). */
+body:has(.hero) .header-home {
+  display: none;
+}
+
+/* Complaint form page — light-blue sky with slow-drifting white clouds behind the cards. */
+body:has(.complaint-page) {
+  background: #dbe9f6;
+}
+body:has(.complaint-page)::before,
+body:has(.complaint-page)::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  /* Oversized so translating one tile-width never exposes a gap. */
+  width: calc(100vw + 1160px);
+  height: 100vh;
+  z-index: -1;
+  pointer-events: none;
+  background-repeat: repeat;
+  will-change: transform;
+}
+/* Near layer — smaller, brighter clouds, faster drift. */
+body:has(.complaint-page)::before {
+  background-image:
+    /* cloud A — flat base + three top bumps */
+    radial-gradient(120px 34px at 150px 152px, #fff 74%, rgba(255, 255, 255, 0) 88%),
+    radial-gradient(52px 46px at 106px 120px, #fff 74%, rgba(255, 255, 255, 0) 88%),
+    radial-gradient(74px 64px at 160px 104px, #fff 74%, rgba(255, 255, 255, 0) 88%),
+    radial-gradient(52px 46px at 212px 122px, #fff 74%, rgba(255, 255, 255, 0) 88%),
+    /* cloud B */
+    radial-gradient(132px 36px at 572px 392px, #fff 74%, rgba(255, 255, 255, 0) 88%),
+    radial-gradient(56px 50px at 516px 358px, #fff 74%, rgba(255, 255, 255, 0) 88%),
+    radial-gradient(80px 68px at 578px 340px, #fff 74%, rgba(255, 255, 255, 0) 88%),
+    radial-gradient(56px 50px at 636px 358px, #fff 74%, rgba(255, 255, 255, 0) 88%);
+  background-size: 820px 560px;
+  animation: cloud-drift-a 70s linear infinite;
+}
+/* Far layer — larger, softer clouds, slower drift (depth). */
+body:has(.complaint-page)::after {
+  background-image:
+    /* cloud A — big and soft */
+    radial-gradient(180px 46px at 380px 262px, rgba(255, 255, 255, 0.9) 68%, rgba(255, 255, 255, 0) 88%),
+    radial-gradient(74px 64px at 312px 226px, rgba(255, 255, 255, 0.9) 68%, rgba(255, 255, 255, 0) 88%),
+    radial-gradient(106px 92px at 392px 202px, rgba(255, 255, 255, 0.9) 68%, rgba(255, 255, 255, 0) 88%),
+    radial-gradient(76px 66px at 464px 224px, rgba(255, 255, 255, 0.9) 68%, rgba(255, 255, 255, 0) 88%),
+    /* cloud B */
+    radial-gradient(160px 42px at 884px 560px, rgba(255, 255, 255, 0.85) 68%, rgba(255, 255, 255, 0) 88%),
+    radial-gradient(70px 60px at 826px 526px, rgba(255, 255, 255, 0.85) 68%, rgba(255, 255, 255, 0) 88%),
+    radial-gradient(96px 82px at 896px 508px, rgba(255, 255, 255, 0.85) 68%, rgba(255, 255, 255, 0) 88%);
+  background-size: 1160px 720px;
+  animation: cloud-drift-b 120s linear infinite;
+}
+@keyframes cloud-drift-a {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-820px, 0, 0); }
+}
+@keyframes cloud-drift-b {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-1160px, 0, 0); }
+}
+@media (max-width: 760px) {
+  .hero__footer {
+    padding: 14px 28px;
+  }
+}
+.hero__actions {
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+.hero .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  border-radius: 50px;
+  padding: 15px 30px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.hero .btn--primary {
+  background: var(--color-pe-green);
+  color: #fff;
+}
+.hero .btn--primary:hover {
+  background: var(--color-pe-green-dark);
+}
+.hero .btn--ghost {
+  background: transparent;
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+.hero .btn--ghost:hover {
+  border-color: #fff;
+}
+.hero .btn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+@media (max-width: 760px) {
+  .hero__copy {
+    flex-basis: 100%;
+    padding: 40px 28px;
+  }
+  .hero__scrim {
+    background: linear-gradient(
+      180deg,
+      rgba(13, 36, 64, 0.92) 0%,
+      rgba(13, 36, 64, 0.6) 100%
+    );
+  }
+  .hero__title {
+    font-size: 44px;
+  }
 }

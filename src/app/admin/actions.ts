@@ -48,11 +48,19 @@ export async function updateStatusAction(formData: FormData) {
         statusEvents: { create: { status, note, createdById: session.sub } },
       },
     });
-    await sendEmail(
-      complaint.user.email,
-      `Update on complaint ${complaint.complaintId} — ${STATUS_LABEL[status]}`,
-      statusUpdateEmail(complaint.user.name, complaint.complaintId, STATUS_LABEL[status], note),
-    );
+    const email = complaint.user?.email ?? complaint.customerEmail;
+    if (email) {
+      await sendEmail(
+        email,
+        `Update on complaint ${complaint.complaintId} · ${STATUS_LABEL[status]}`,
+        statusUpdateEmail(
+          complaint.user?.name ?? complaint.customerName ?? "Customer",
+          complaint.complaintId,
+          STATUS_LABEL[status],
+          note,
+        ),
+      );
+    }
   }
   refresh(complaintId);
 }

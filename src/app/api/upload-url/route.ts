@@ -19,8 +19,10 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  // Anonymous filing is allowed — logged-in uploads go under the user id,
+  // anonymous ones under an "anon/" prefix.
   const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const owner = session?.sub ?? "anon";
 
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
     return NextResponse.json(
@@ -52,7 +54,7 @@ export async function POST(req: NextRequest) {
   }
 
   const safeName = fileName.replace(/[^\w.\-]+/g, "_").slice(-80);
-  const base = `${session.sub}/${randomUUID()}`;
+  const base = `${owner}/${randomUUID()}`;
   const upload = await createSignedUploadUrl(`${base}-${safeName}`);
   const thumb = thumbnail ? await createSignedUploadUrl(`${base}-thumb.jpg`) : null;
 

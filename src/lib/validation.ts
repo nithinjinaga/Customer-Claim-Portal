@@ -14,37 +14,6 @@ export const passwordSchema = z
   .regex(/[A-Z]/, "At least 1 uppercase letter")
   .regex(/\d/, "At least 1 number");
 
-export const registerSchema = z
-  .object({
-    name: z.string().trim().min(2, "Full name is required"),
-    email: z.string().trim().toLowerCase().email("Enter a valid email"),
-    phone: phoneSchema,
-    altPhone: z
-      .union([z.literal(""), phoneSchema])
-      .optional()
-      .transform((v) => (v === "" ? undefined : v)),
-    company: z.string().trim().optional(),
-    customerType: z.enum([
-      "RESIDENTIAL",
-      "COMMERCIAL",
-      "INDUSTRIAL",
-      "EPC",
-      "CHANNEL_PARTNER",
-    ]),
-    houseNo: z.string().trim().min(1, "Required"),
-    street: z.string().trim().min(1, "Required"),
-    pincode: z.string().regex(/^\d{6}$/, "6-digit pincode"),
-    state: z.string().trim().min(1, "Required"),
-    district: z.string().trim().min(1, "Required"),
-    city: z.string().trim().min(1, "Required"),
-    password: passwordSchema,
-    confirmPassword: z.string(),
-  })
-  .refine((d) => d.password === d.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  });
-
 export const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email"),
   password: z.string().min(1, "Password is required"),
@@ -58,11 +27,32 @@ const pastDate = () =>
     .refine((d) => !isNaN(d.getTime()), "Enter a valid date")
     .refine((d) => d <= new Date(), "Cannot be in the future");
 
+// Blank optional inputs arrive as "" — coerce would turn that into 0 / Invalid Date,
+// so map empty → undefined before the inner schema runs.
+const blankable = <T extends z.ZodTypeAny>(inner: T) =>
+  z.preprocess((v) => (v === "" || v === null ? undefined : v), inner.optional());
+
+const optNumber = blankable(z.coerce.number().positive("Must be greater than 0"));
+const optInt = blankable(z.coerce.number().int().min(1, "At least 1"));
+const optPastDate = blankable(pastDate());
+const optString = blankable(z.string().trim().min(1));
+
+// Who's filing — required for both anon and logged-in (prefilled) submissions.
+export const contactSchema = z.object({
+  name: z.string().trim().min(2, "Your name is required"),
+  email: z.string().trim().toLowerCase().email("Enter a valid email"),
+  phone: phoneSchema,
+  altPhone: z
+    .union([z.literal(""), phoneSchema])
+    .optional()
+    .transform((v) => (v === "" ? undefined : v)),
+});
+
 export const siteSchema = z.object({
   siteAddress: z.string().trim().min(10, "Enter the full site address"),
-  siteCapacityKwp: z.coerce.number().positive("Must be greater than 0"),
-  gridType: z.enum(["ON_GRID", "OFF_GRID"]),
-  commissionedDate: pastDate(),
+  siteCapacityKwp: optNumber,
+  gridType: blankable(z.enum(["ON_GRID", "OFF_GRID"])),
+  commissionedDate: optPastDate,
   invoiceNumber: z.string().trim().min(2, "Invoice number is required"),
 });
 
@@ -71,28 +61,23 @@ export const modulesSchema = z.object({
     .array(z.string().trim().min(3, "Serial number too short"))
     .min(1, "Add at least one serial number"),
   moduleModel: z.string().trim().optional(),
-  wpRating: z.coerce.number().positive("Must be greater than 0"),
-  defectiveQty: z.coerce.number().int().min(1, "At least 1"),
+  wpRating: optNumber,
+  defectiveQty: optInt,
 });
 
-export const defectSchema = z.discriminatedUnion("defectType", [
-  z.object({
-    defectType: z.literal("TECHNICAL_FAULT"),
-    description: z.string().trim().min(50, "Describe the problem in at least 50 characters"),
-    defectNoticedDate: pastDate(),
-    technicianInspected: z.preprocess((v) => v === true || v === "true", z.boolean()),
-    technicianFindings: z.string().trim().optional(),
-  }),
-  z.object({
-    defectType: z.literal("TRANSIT_BREAKAGE"),
-    description: z.string().trim().min(50, "Describe the breakage in at least 50 characters"),
-    receivedDate: pastDate(),
-    deliveryMode: z.enum(["ON_ROAD", "BY_AIR", "BY_SEA"]),
-    vehicleNumber: z.string().trim().min(3, "Required"),
-    transporterName: z.string().trim().min(2, "Required"),
-    unloadingMode: z.string().trim().min(2, "Required"),
-  }),
-]);
+// Only defectType + description stay mandatory; sub-fields are all optional now.
+export const defectSchema = z.object({
+  defectType: z.enum(["TECHNICAL_FAULT", "TRANSIT_BREAKAGE"]),
+  description: z.string().trim().min(50, "Describe the problem in at least 50 characters"),
+  defectNoticedDate: optPastDate,
+  technicianInspected: blankable(z.preprocess((v) => v === true || v === "true", z.boolean())),
+  technicianFindings: z.string().trim().optional(),
+  receivedDate: optPastDate,
+  deliveryMode: blankable(z.enum(["ON_ROAD", "BY_AIR", "BY_SEA"])),
+  vehicleNumber: optString,
+  transporterName: optString,
+  unloadingMode: optString,
+});
 
 const attachmentMeta = z.object({
   kind: z.enum(["INVOICE", "EVIDENCE"]),
@@ -106,6 +91,7 @@ const attachmentMeta = z.object({
 export const attachmentsRelaxedSchema = z.array(attachmentMeta).max(11); // 10 evidence + 1 invoice
 
 export const complaintSchema = z.object({
+  contact: contactSchema,
   site: siteSchema,
   modules: modulesSchema,
   defect: defectSchema,
@@ -113,6 +99,15 @@ export const complaintSchema = z.object({
     (a) => a.some((f) => f.kind === "EVIDENCE" && f.mimeType.startsWith("image/")),
     "At least one evidence image is required",
   ),
+});
+
+// Same shape minus attachments — attachments are managed as separate upload state
+// in the client form, so the RHF resolver validates only the typed fields.
+export const complaintFormSchema = z.object({
+  contact: contactSchema,
+  site: siteSchema,
+  modules: modulesSchema,
+  defect: defectSchema,
 });
 
 export type ComplaintInput = z.infer<typeof complaintSchema>;

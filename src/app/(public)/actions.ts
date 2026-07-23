@@ -5,52 +5,21 @@ import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { setSessionCookie, clearSessionCookie } from "@/lib/auth";
-import { registerSchema, loginSchema, passwordSchema } from "@/lib/validation";
-import { sendEmail, welcomeEmail, passwordResetEmail } from "@/lib/email";
+import { loginSchema, passwordSchema } from "@/lib/validation";
+import { sendEmail, passwordResetEmail } from "@/lib/email";
 
 const LOCKOUT_ATTEMPTS = 5;
 const LOCKOUT_MINUTES = 15;
 
-export async function registerAction(raw: unknown): Promise<{ error?: string }> {
-  const parsed = registerSchema.safeParse(raw);
-  if (!parsed.success) return { error: parsed.error.issues[0].message };
-  const d = parsed.data;
-
-  const existing = await db.user.findUnique({ where: { email: d.email } });
-  if (existing) return { error: "An account with this email already exists. Please log in." };
-
-  const passwordHash = await bcrypt.hash(d.password, 10);
-  await db.user.create({
-    data: {
-      name: d.name,
-      email: d.email,
-      phone: d.phone,
-      altPhone: d.altPhone,
-      company: d.company || null,
-      customerType: d.customerType,
-      houseNo: d.houseNo,
-      street: d.street,
-      pincode: d.pincode,
-      state: d.state,
-      district: d.district,
-      city: d.city,
-      passwordHash,
-    },
-  });
-  await sendEmail(d.email, "Welcome to the Premier Energies Customer Service Portal", welcomeEmail(d.name));
-  redirect("/login?registered=1");
-}
-
-export async function loginAction(
-  raw: unknown,
-  nextPath?: string,
-): Promise<{ error?: string }> {
+export async function loginAction(raw: unknown): Promise<{ error?: string }> {
   const parsed = loginSchema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const { email, password } = parsed.data;
 
   const user = await db.user.findUnique({ where: { email } });
   if (!user) return { error: "Invalid email or password." };
+  // Staff-only portal — customers file/track without accounts.
+  if (user.role === "CUSTOMER") return { error: "Invalid email or password." };
 
   if (user.lockedUntil && user.lockedUntil > new Date()) {
     const mins = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 60000);
@@ -75,12 +44,12 @@ export async function loginAction(
     data: { failedAttempts: 0, lockedUntil: null },
   });
   await setSessionCookie({ sub: user.id, role: user.role, name: user.name });
-  redirect(nextPath && nextPath.startsWith("/") ? nextPath : user.role === "CUSTOMER" ? "/dashboard" : "/admin");
+  redirect("/admin");
 }
 
 export async function logoutAction() {
   await clearSessionCookie();
-  redirect("/login");
+  redirect("/admin/login");
 }
 
 export async function forgotPasswordAction(email: string): Promise<{ ok: true }> {

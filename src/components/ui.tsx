@@ -15,7 +15,7 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-sm font-medium text-ink">
+      <span className="mb-1.5 block text-sm font-semibold text-ink">
         {label}
         {required && <span className="text-status-rejected"> *</span>}
       </span>
@@ -27,20 +27,29 @@ export function Field({
 }
 
 export const inputCls =
-  "w-full rounded-card border border-line bg-card px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:border-pe-blue focus:outline-none focus:ring-2 focus:ring-pe-blue/20 disabled:bg-surface";
+  "w-full rounded-card border border-input bg-card px-3.5 py-2.5 text-sm text-ink placeholder:text-muted/60 transition-colors focus:border-pe-blue focus:outline-none focus:ring-2 focus:ring-pe-blue/20 disabled:bg-surface disabled:text-muted";
 
+// Green pill — primary call to action (redesign).
 export const btnPrimary =
-  "inline-flex items-center justify-center gap-2 rounded-card bg-pe-blue px-5 py-2.5 text-sm font-semibold text-white hover:bg-pe-blue-dark focus:outline-none focus:ring-2 focus:ring-pe-blue/40 disabled:opacity-50 disabled:cursor-not-allowed";
+  "inline-flex items-center justify-center gap-2 rounded-full bg-pe-green px-7 py-3.5 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-pe-green-dark active:translate-y-px focus:outline-none focus:ring-2 focus:ring-pe-green/40 disabled:opacity-40 disabled:cursor-not-allowed";
 
-export const btnGreen =
-  "inline-flex items-center justify-center gap-2 rounded-card bg-pe-green px-5 py-2.5 text-sm font-semibold text-white hover:bg-pe-green-dark focus:outline-none focus:ring-2 focus:ring-pe-green/40 disabled:opacity-50 disabled:cursor-not-allowed";
+export const btnGreen = btnPrimary;
 
+// Outline pill — secondary action.
 export const btnGhost =
-  "inline-flex items-center justify-center gap-2 rounded-card border border-line bg-card px-5 py-2.5 text-sm font-semibold text-ink hover:border-pe-blue hover:text-pe-blue focus:outline-none focus:ring-2 focus:ring-pe-blue/20";
+  "inline-flex items-center justify-center gap-2 rounded-full border border-input bg-transparent px-7 py-3.5 text-xs font-semibold uppercase tracking-wider text-pe-navy transition-colors hover:border-pe-navy focus:outline-none focus:ring-2 focus:ring-pe-blue/30";
 
-export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
+export function Card({
+  children,
+  className = "",
+  id,
+}: {
+  children: ReactNode;
+  className?: string;
+  id?: string;
+}) {
   return (
-    <div className={`rounded-card border border-line bg-card p-6 shadow-sm ${className}`}>
+    <div id={id} className={`rounded-[28px] border border-line bg-card p-7 ${className}`}>
       {children}
     </div>
   );
@@ -73,8 +82,9 @@ export function StatusBadge({ status }: { status: string }) {
   }[status] ?? "bg-surface text-muted border-line";
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold tracking-wide ${color}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide ${color}`}
     >
+      <span className="h-1.5 w-1.5 rounded-full bg-current" />
       {STATUS_LABEL[status] ?? status}
     </span>
   );

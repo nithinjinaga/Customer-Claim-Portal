@@ -10,16 +10,10 @@ export async function middleware(req: NextRequest) {
     if (!session || session.role === "CUSTOMER") {
       return NextResponse.redirect(new URL("/admin/login", req.url));
     }
-  } else if (pathname.startsWith("/dashboard")) {
-    if (!session) {
-      const url = new URL("/login", req.url);
-      url.searchParams.set("next", pathname);
-      return NextResponse.redirect(url);
-    }
   }
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/admin/:path*"],
+  matcher: ["/admin/:path*"],
 };

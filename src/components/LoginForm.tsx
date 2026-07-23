@@ -24,10 +24,7 @@ export default function LoginForm({ staff = false }: { staff?: boolean }) {
   const onSubmit = handleSubmit(async (data) => {
     setSubmitting(true);
     setServerError(undefined);
-    const res = await loginAction(
-      data,
-      staff ? "/admin" : (params.get("next") ?? undefined),
-    );
+    const res = await loginAction(data);
     if (res?.error) {
       setServerError(res.error);
       setSubmitting(false);

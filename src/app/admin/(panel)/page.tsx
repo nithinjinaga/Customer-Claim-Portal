@@ -142,8 +142,8 @@ export default async function AdminDashboard({
                   </td>
                   <td className="px-4 py-3">{c.createdAt.toLocaleDateString("en-IN")}</td>
                   <td className="px-4 py-3">
-                    <p className="font-medium">{c.user.name}</p>
-                    <p className="text-xs text-muted">{c.user.email}</p>
+                    <p className="font-medium">{c.user?.name ?? c.customerName ?? "—"}</p>
+                    <p className="text-xs text-muted">{c.user?.email ?? c.customerEmail ?? "—"}</p>
                   </td>
                   <td className="px-4 py-3">
                     {c.defectType === "TECHNICAL_FAULT" ? "Technical" : "Transit"}

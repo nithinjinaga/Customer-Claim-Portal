@@ -23,10 +23,13 @@ export function buildWhere(f: AdminFilters, session: Session): Prisma.ComplaintW
     if (f.to) where.createdAt.lte = new Date(`${f.to}T23:59:59`);
   }
   if (f.q) {
+    const q = f.q.trim();
     where.OR = [
-      { complaintId: { contains: f.q.trim(), mode: "insensitive" } },
-      { user: { name: { contains: f.q.trim(), mode: "insensitive" } } },
-      { user: { email: { contains: f.q.trim(), mode: "insensitive" } } },
+      { complaintId: { contains: q, mode: "insensitive" } },
+      { user: { name: { contains: q, mode: "insensitive" } } },
+      { user: { email: { contains: q, mode: "insensitive" } } },
+      { customerName: { contains: q, mode: "insensitive" } },
+      { customerEmail: { contains: q, mode: "insensitive" } },
     ];
   }
   return where;

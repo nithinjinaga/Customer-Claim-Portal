@@ -1,24 +1,51 @@
-import Link from "next/link";
 import { db } from "@/lib/db";
-import { Card, StatusBadge, STATUS_LABEL, inputCls, btnPrimary, Alert } from "@/components/ui";
+import { Card, StatusBadge, STATUS_LABEL, inputCls, btnPrimary, btnGhost, Alert } from "@/components/ui";
+import { IconCheck } from "@/components/icons";
+import ComplaintDetail from "@/components/ComplaintDetail";
 
 export const dynamic = "force-dynamic";
 
 const STEPS = ["SUBMITTED", "UNDER_REVIEW", "IN_PROGRESS", "RESOLVED"] as const;
 
+// Last 10 digits, ignoring +91 / spaces / dashes.
+const normPhone = (p: string) => p.replace(/\D/g, "").slice(-10);
+
+/** Does the supplied email-or-phone match this complaint's contact (snapshot or linked user)? */
+function contactMatches(
+  c: { customerEmail: string | null; customerPhone: string | null; user: { email: string; phone: string } | null },
+  key: string,
+): boolean {
+  const k = key.trim().toLowerCase();
+  if (!k) return false;
+  const emails = [c.customerEmail, c.user?.email].filter(Boolean).map((e) => e!.toLowerCase());
+  if (emails.includes(k)) return true;
+  const kp = normPhone(k);
+  if (kp.length === 10) {
+    const phones = [c.customerPhone, c.user?.phone].filter(Boolean).map((p) => normPhone(p!));
+    if (phones.includes(kp)) return true;
+  }
+  return false;
+}
+
 export default async function TrackPage({
   searchParams,
 }: {
-  searchParams: Promise<{ id?: string }>;
+  searchParams: Promise<{ id?: string; k?: string }>;
 }) {
-  const { id } = await searchParams;
+  const { id, k } = await searchParams;
   const complaintId = id?.trim().toUpperCase();
   const complaint = complaintId
     ? await db.complaint.findUnique({
         where: { complaintId },
-        include: { statusEvents: { orderBy: { createdAt: "asc" } } },
+        include: {
+          attachments: true,
+          statusEvents: { orderBy: { createdAt: "asc" } },
+          user: { select: { email: true, phone: true } },
+        },
       })
     : null;
+
+  const unlocked = !!(complaint && k && contactMatches(complaint, k));
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -46,7 +73,15 @@ export default async function TrackPage({
         </div>
       )}
 
-      {complaint && (
+      {/* Unlocked: full details (contact second-factor matched). */}
+      {complaint && unlocked && (
+        <div className="mt-6">
+          <ComplaintDetail complaint={complaint} />
+        </div>
+      )}
+
+      {/* Locked: status-only summary + unlock form. */}
+      {complaint && !unlocked && (
         <Card className="mt-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -79,26 +114,35 @@ export default async function TrackPage({
               </Alert>
             </div>
           ) : (
-            <ol className="mt-6 flex items-center">
+            <ol className="mt-7 flex items-start">
               {STEPS.map((step, i) => {
                 const reachedIdx = STEPS.indexOf(complaint.status as (typeof STEPS)[number]);
-                const done = i <= reachedIdx;
+                const isDone = i <= reachedIdx;
+                const isNext = i === reachedIdx + 1;
                 return (
                   <li key={step} className="flex flex-1 items-center last:flex-none">
                     <div className="flex flex-col items-center">
                       <span
-                        className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
-                          done ? "bg-pe-green text-white" : "border border-line bg-surface text-muted"
+                        className={`tnum flex h-[34px] w-[34px] items-center justify-center rounded-full text-[13px] font-semibold ${
+                          isDone
+                            ? "bg-pe-green text-white"
+                            : isNext
+                              ? "border-2 border-pe-blue bg-card text-pe-navy ring-4 ring-pe-blue/20"
+                              : "border border-input bg-surface text-muted"
                         }`}
                       >
-                        {done ? "✓" : i + 1}
+                        {isDone ? <IconCheck className="h-4 w-4" /> : i + 1}
                       </span>
-                      <span className="mt-1.5 w-16 text-center text-[10px] font-medium leading-tight text-muted">
+                      <span
+                        className={`mt-2 w-16 text-center text-[10px] font-semibold uppercase leading-tight tracking-wide ${
+                          isDone || isNext ? "text-pe-navy" : "text-muted"
+                        }`}
+                      >
                         {STATUS_LABEL[step]}
                       </span>
                     </div>
                     {i < STEPS.length - 1 && (
-                      <div className={`mx-1 mb-5 h-0.5 flex-1 ${i < reachedIdx ? "bg-pe-green" : "bg-line"}`} />
+                      <div className={`mx-1.5 mt-4 h-0.5 flex-1 rounded ${i < reachedIdx ? "bg-pe-green" : "bg-line"}`} />
                     )}
                   </li>
                 );
@@ -106,13 +150,30 @@ export default async function TrackPage({
             </ol>
           )}
 
-          <p className="mt-6 border-t border-line pt-4 text-xs text-muted">
-            For full details and evidence,{" "}
-            <Link href="/login" className="font-medium text-pe-blue hover:underline">
-              log in to your dashboard
-            </Link>
-            .
-          </p>
+          <div className="mt-6 border-t border-line pt-4">
+            <h2 className="text-sm font-semibold text-pe-navy">See full details &amp; evidence</h2>
+            <p className="mt-1 text-xs text-muted">
+              For your privacy, enter the email or mobile number you filed this complaint with.
+            </p>
+            {k && !unlocked && (
+              <div className="mt-3">
+                <Alert kind="error">Those details don&apos;t match this complaint. Please try again.</Alert>
+              </div>
+            )}
+            <form action="/track" className="mt-3 flex gap-2">
+              <input type="hidden" name="id" value={complaint.complaintId} />
+              <input
+                name="k"
+                required
+                placeholder="Email or mobile number"
+                className={inputCls}
+                aria-label="Email or mobile number used to file"
+              />
+              <button type="submit" className={btnGhost}>
+                Unlock
+              </button>
+            </form>
+          </div>
         </Card>
       )}
     </div>
