@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { Resend } from "resend";
 
 const BLUE = "#2461ac";
@@ -6,6 +8,21 @@ const NAVY = "#154074";
 
 const appUrl = () => process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
+// Logo is embedded inline (cid:) rather than linked — email clients can't reach
+// the app URL (localhost / non-public), so a linked <img src> won't load.
+const LOGO_CID = "pe-logo";
+let logoB64: string | null = null;
+function logoAttachment() {
+  if (logoB64 === null) {
+    try {
+      logoB64 = readFileSync(join(process.cwd(), "public", "logo.png")).toString("base64");
+    } catch {
+      logoB64 = "";
+    }
+  }
+  return logoB64 ? [{ filename: "logo.png", content: logoB64, contentId: LOGO_CID }] : undefined;
+}
+
 export const RESPONSE_TIMELINE = "within 3 business days";
 
 function shell(title: string, body: string) {
@@ -13,7 +30,7 @@ function shell(title: string, body: string) {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:24px 12px">
     <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border:1px solid #dbe3ea;border-radius:6px;overflow:hidden">
       <tr><td style="padding:20px 28px;border-bottom:3px solid ${GREEN}">
-        <img src="${appUrl()}/logo.png" alt="Premier Energies" width="150" style="display:block">
+        <img src="cid:${LOGO_CID}" alt="Premier Energies" width="150" style="display:block">
       </td></tr>
       <tr><td style="padding:28px">
         <h1 style="margin:0 0 16px;font-size:20px;color:${NAVY}">${title}</h1>
@@ -46,6 +63,7 @@ export async function sendEmail(to: string, subject: string, html: string) {
     to,
     subject,
     html,
+    attachments: logoAttachment(),
   });
   if (error) console.error("[email] send failed:", error);
 }
