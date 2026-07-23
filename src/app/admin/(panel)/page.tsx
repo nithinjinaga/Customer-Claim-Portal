@@ -89,7 +89,7 @@ export default async function AdminDashboard({
             className={inputCls}
           />
           <select name="status" defaultValue={filters.status ?? ""} className={inputCls}>
-            <option value="">All statuses</option>
+            <option value="">All status</option>
             {Object.entries(STATUS_LABEL).map(([v, l]) => (
               <option key={v} value={v}>
                 {l}

@@ -1,7 +1,9 @@
 import { db } from "@/lib/db";
-import { Card, StatusBadge, STATUS_LABEL, inputCls, btnPrimary, btnGhost, Alert } from "@/components/ui";
+import { Card, StatusBadge, STATUS_LABEL, Alert } from "@/components/ui";
 import { IconCheck } from "@/components/icons";
 import ComplaintDetail from "@/components/ComplaintDetail";
+import TrackSearch from "./track-search";
+import UnlockForm from "./unlock-form";
 
 export const dynamic = "force-dynamic";
 
@@ -48,21 +50,12 @@ export default async function TrackPage({
   const unlocked = !!(complaint && k && contactMatches(complaint, k));
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <>
       <h1 className="text-2xl font-bold">Track a complaint</h1>
-      <form action="/track" className="mt-4 flex gap-2">
-        <input
-          name="id"
-          defaultValue={complaintId ?? ""}
-          required
-          placeholder="Complaint ID, e.g. PE1707202601"
-          className={`${inputCls} tnum uppercase`}
-          aria-label="Complaint ID"
-        />
-        <button type="submit" className={btnPrimary}>
-          Track
-        </button>
-      </form>
+      <p className="mt-1 text-sm text-muted">
+        Enter your Complaint ID to check the status of your after-sales request.
+      </p>
+      <TrackSearch defaultId={complaintId ?? ""} />
 
       {complaintId && !complaint && (
         <div className="mt-6">
@@ -160,22 +153,10 @@ export default async function TrackPage({
                 <Alert kind="error">Those details don&apos;t match this complaint. Please try again.</Alert>
               </div>
             )}
-            <form action="/track" className="mt-3 flex gap-2">
-              <input type="hidden" name="id" value={complaint.complaintId} />
-              <input
-                name="k"
-                required
-                placeholder="Email or mobile number"
-                className={inputCls}
-                aria-label="Email or mobile number used to file"
-              />
-              <button type="submit" className={btnGhost}>
-                Unlock
-              </button>
-            </form>
+            <UnlockForm complaintId={complaint.complaintId} />
           </div>
         </Card>
       )}
-    </div>
+    </>
   );
 }

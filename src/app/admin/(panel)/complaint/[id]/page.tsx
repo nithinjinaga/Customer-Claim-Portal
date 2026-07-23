@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import ComplaintDetail from "@/components/ComplaintDetail";
-import { updateStatusAction, assignAction, addNoteAction } from "../../../actions";
+import { updateStatusAction, addNoteAction } from "../../../actions";
 import { Card, STATUS_LABEL, inputCls, btnPrimary, btnGhost } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -32,12 +32,6 @@ export default async function AdminComplaintPage({
   });
   if (!complaint) notFound();
   if (session.role === "AGENT" && complaint.assignedToId !== session.sub) notFound();
-
-  const staff = await db.user.findMany({
-    where: { role: { in: ["AGENT", "ADMIN"] } },
-    select: { id: true, name: true, role: true },
-    orderBy: { name: "asc" },
-  });
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
@@ -77,7 +71,7 @@ export default async function AdminComplaintPage({
         </Card>
 
         <Card>
-          <h2 className="text-sm font-semibold text-pe-navy">Update status</h2>
+          <h2 className="text-sm font-semibold text-pe-navy">Status</h2>
           <form action={updateStatusAction} className="mt-3 grid gap-3">
             <input type="hidden" name="complaintId" value={complaint.complaintId} />
             <select name="status" defaultValue={complaint.status} className={inputCls}>
@@ -98,26 +92,6 @@ export default async function AdminComplaintPage({
             </button>
           </form>
         </Card>
-
-        {session.role === "ADMIN" && (
-          <Card>
-            <h2 className="text-sm font-semibold text-pe-navy">Assignment</h2>
-            <form action={assignAction} className="mt-3 grid gap-3">
-              <input type="hidden" name="complaintId" value={complaint.complaintId} />
-              <select name="assignedToId" defaultValue={complaint.assignedToId ?? ""} className={inputCls}>
-                <option value="">Unassigned</option>
-                {staff.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} ({s.role === "ADMIN" ? "Admin" : "Agent"})
-                  </option>
-                ))}
-              </select>
-              <button type="submit" className={btnGhost}>
-                Assign
-              </button>
-            </form>
-          </Card>
-        )}
 
         <Card>
           <h2 className="text-sm font-semibold text-pe-navy">Evidence download</h2>
