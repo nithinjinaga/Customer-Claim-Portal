@@ -4,7 +4,9 @@ import { getSession } from "@/lib/auth";
 import { buildWhere, type AdminFilters } from "@/app/admin/query";
 
 const csvCell = (v: unknown) => {
-  const s = v === null || v === undefined ? "" : String(v);
+  let s = v === null || v === undefined ? "" : String(v);
+  // Neutralize spreadsheet formula injection (=, +, -, @, tab, CR leading chars).
+  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
   return /[",\n]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s;
 };
 

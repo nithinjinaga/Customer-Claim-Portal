@@ -1,8 +1,7 @@
 "use server";
 
-import { createHash } from "node:crypto";
-import { headers } from "next/headers";
 import { db } from "@/lib/db";
+import { clientIpHash } from "@/lib/rate-limit";
 import { complaintSchema, attachmentsRelaxedSchema } from "@/lib/validation";
 import {
   sendEmail,
@@ -16,17 +15,10 @@ import { nextComplaintId } from "@/lib/complaint-id";
 
 const MAX_PER_HOUR = 5;
 
-// ponytail: fixed fallback salt — set IP_HASH_SALT in prod so hashes aren't guessable
-async function hashIp() {
-  const h = await headers();
-  const ip = (h.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
-  return createHash("sha256").update((process.env.IP_HASH_SALT ?? "pe-portal") + ip).digest("hex");
-}
-
 export async function submitComplaint(
   raw: unknown,
 ): Promise<{ complaintId?: string; error?: string }> {
-  const ipHash = await hashIp();
+  const ipHash = await clientIpHash();
 
   // Public form is always anonymous — rate limit by hashed IP.
   const recent = await db.complaint.count({

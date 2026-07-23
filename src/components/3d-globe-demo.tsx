@@ -37,8 +37,10 @@ export default function Globe3DDemo() {
         pointLightIntensity: 2.3,
         bumpScale: 5,
         autoRotateSpeed: 0.3,
-        // Start with India (Hyderabad, ~78.5°E) facing the camera on load.
-        initialRotation: { x: 0, y: -((78.5 + 90) * Math.PI) / 180 },
+        // Start framed on India: Hyderabad (~78.5°E) faces the camera, and the
+        // X-tilt pitches the view north so the subcontinent is centred with less
+        // ocean below (matches the desired framing).
+        initialRotation: { x: 0.4, y: -((78.5 + 90) * Math.PI) / 180 },
       }}
       onMarkerClick={() => {}}
       onMarkerHover={() => {}}

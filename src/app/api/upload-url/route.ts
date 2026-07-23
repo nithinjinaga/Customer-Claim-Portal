@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { getSession } from "@/lib/auth";
+import { clientIpHash, rateLimit } from "@/lib/rate-limit";
 import { createSignedUploadUrl } from "@/lib/storage";
 import {
   IMAGE_TYPES,
@@ -28,6 +29,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       { error: "File storage is not configured yet" },
       { status: 503 },
+    );
+  }
+
+  // Cap signed-URL requests per IP to prevent storage-bucket abuse.
+  if (!rateLimit(`upload:${await clientIpHash()}`, 60, 60_000)) {
+    return NextResponse.json(
+      { error: "Too many upload requests. Please slow down." },
+      { status: 429 },
     );
   }
 

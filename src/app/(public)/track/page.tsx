@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { Card, StatusBadge, STATUS_LABEL, Alert } from "@/components/ui";
 import { IconCheck } from "@/components/icons";
 import ComplaintDetail from "@/components/ComplaintDetail";
+import { clientIpHash, rateLimit } from "@/lib/rate-limit";
 import TrackSearch from "./track-search";
 import UnlockForm from "./unlock-form";
 
@@ -47,7 +48,10 @@ export default async function TrackPage({
       })
     : null;
 
-  const unlocked = !!(complaint && k && contactMatches(complaint, k));
+  // Throttle unlock attempts per IP (complaint IDs are guessable; this blocks
+  // brute-forcing the email/phone second factor).
+  const unlockBlocked = !!k && !rateLimit(`unlock:${await clientIpHash()}`, 10, 10 * 60_000);
+  const unlocked = !unlockBlocked && !!(complaint && k && contactMatches(complaint, k));
 
   return (
     <>
@@ -150,7 +154,11 @@ export default async function TrackPage({
             </p>
             {k && !unlocked && (
               <div className="mt-3">
-                <Alert kind="error">Those details don&apos;t match this complaint. Please try again.</Alert>
+                <Alert kind="error">
+                  {unlockBlocked
+                    ? "Too many attempts. Please wait a few minutes and try again."
+                    : "Those details don't match this complaint. Please try again."}
+                </Alert>
               </div>
             )}
             <UnlockForm complaintId={complaint.complaintId} />
