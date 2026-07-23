@@ -32,7 +32,6 @@ const pastDate = () =>
 const blankable = <T extends z.ZodTypeAny>(inner: T) =>
   z.preprocess((v) => (v === "" || v === null ? undefined : v), inner.optional());
 
-const optNumber = blankable(z.coerce.number().positive("Must be greater than 0"));
 const optInt = blankable(z.coerce.number().int().min(1, "At least 1"));
 const optPastDate = blankable(pastDate());
 const optString = blankable(z.string().trim().min(1));
@@ -50,7 +49,7 @@ export const contactSchema = z.object({
 
 export const siteSchema = z.object({
   siteAddress: z.string().trim().min(10, "Enter the full site address"),
-  siteCapacityKwp: optNumber,
+  siteCapacityKwp: z.coerce.number().positive("Enter the site capacity in KWp"),
   gridType: blankable(z.enum(["ON_GRID", "OFF_GRID"])),
   commissionedDate: optPastDate,
   invoiceNumber: z.string().trim().min(2, "Invoice number is required"),
@@ -61,23 +60,30 @@ export const modulesSchema = z.object({
     .array(z.string().trim().min(3, "Serial number too short"))
     .min(1, "Add at least one serial number"),
   moduleModel: z.string().trim().optional(),
-  wpRating: optNumber,
+  wpRating: z.coerce.number().positive("Enter the Wp rating"),
   defectiveQty: optInt,
 });
 
-// Only defectType + description stay mandatory; sub-fields are all optional now.
-export const defectSchema = z.object({
-  defectType: z.enum(["TECHNICAL_FAULT", "TRANSIT_BREAKAGE"]),
-  description: z.string().trim().min(50, "Describe the problem in at least 50 characters"),
-  defectNoticedDate: optPastDate,
-  technicianInspected: blankable(z.preprocess((v) => v === true || v === "true", z.boolean())),
-  technicianFindings: z.string().trim().optional(),
-  receivedDate: optPastDate,
-  deliveryMode: blankable(z.enum(["ON_ROAD", "BY_AIR", "BY_SEA"])),
-  vehicleNumber: optString,
-  transporterName: optString,
-  unloadingMode: optString,
-});
+// defectType + description are always required; transitSerialRef is required only
+// for Transit Breakage (enforced by the refine below).
+export const defectSchema = z
+  .object({
+    defectType: z.enum(["TECHNICAL_FAULT", "TRANSIT_BREAKAGE"]),
+    description: z.string().trim().min(50, "Describe the problem in at least 50 characters"),
+    defectNoticedDate: optPastDate,
+    technicianInspected: blankable(z.preprocess((v) => v === true || v === "true", z.boolean())),
+    technicianFindings: z.string().trim().optional(),
+    receivedDate: optPastDate,
+    deliveryMode: blankable(z.enum(["ON_ROAD", "BY_AIR", "BY_SEA"])),
+    vehicleNumber: optString,
+    transporterName: optString,
+    unloadingMode: optString,
+    transitSerialRef: optString,
+  })
+  .refine((d) => d.defectType !== "TRANSIT_BREAKAGE" || !!d.transitSerialRef, {
+    path: ["transitSerialRef"],
+    message: "Serial no of module is required",
+  });
 
 const attachmentMeta = z.object({
   kind: z.enum(["INVOICE", "EVIDENCE"]),

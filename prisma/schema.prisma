@@ -122,6 +122,7 @@ model Complaint {
   vehicleNumber       String?
   transporterName     String?
   unloadingMode       String?
+  transitSerialRef    String? // module serial for reference (Transit Breakage)
 
   attachments  Attachment[]
   statusEvents StatusEvent[]

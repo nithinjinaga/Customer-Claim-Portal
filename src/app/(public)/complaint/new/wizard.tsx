@@ -75,6 +75,7 @@ const emptyValues = (contact?: ContactDefaults): FormValues =>
       vehicleNumber: "",
       transporterName: "",
       unloadingMode: "",
+      transitSerialRef: "",
     },
   }) as unknown as FormValues;
 
@@ -212,8 +213,8 @@ export default function Wizard({
   const wv = watch();
   const done_: Record<SectionKey, boolean> = {
     contact: !!(wv.contact?.name?.trim() && wv.contact?.email?.trim() && wv.contact?.phone?.trim()),
-    site: !!(wv.site?.siteAddress?.trim() && wv.site?.invoiceNumber?.trim()),
-    modules: serials.some((x) => x.trim().length >= 3),
+    site: !!(wv.site?.siteAddress?.trim() && wv.site?.invoiceNumber?.trim() && String(wv.site?.siteCapacityKwp ?? "").trim()),
+    modules: serials.some((x) => x.trim().length >= 3) && !!String(wv.modules?.wpRating ?? "").trim(),
     defect: (wv.defect?.description ?? "").trim().length >= 50,
     evidence: evidence.length > 0,
   };
@@ -297,7 +298,7 @@ export default function Wizard({
             <Field label="Invoice number" required error={errors.site?.invoiceNumber?.message}>
               <input className={inputCls} {...register("site.invoiceNumber")} />
             </Field>
-            <Field label="Site capacity (KWp)" error={errors.site?.siteCapacityKwp?.message}>
+            <Field label="Site capacity (KWp)" required error={errors.site?.siteCapacityKwp?.message}>
               <input className={`${inputCls} tnum`} type="number" step="any" min="0" {...register("site.siteCapacityKwp")} />
             </Field>
             <Field label="Grid type" error={errors.site?.gridType?.message}>
@@ -366,7 +367,7 @@ export default function Wizard({
             <Field label="Module model" error={errors.modules?.moduleModel?.message} hint="As printed on the label">
               <input className={inputCls} {...register("modules.moduleModel")} />
             </Field>
-            <Field label="Wp rating of modules" error={errors.modules?.wpRating?.message}>
+            <Field label="Wp Rating (Enter Any one)" required error={errors.modules?.wpRating?.message}>
               <input className={`${inputCls} tnum`} type="number" step="any" min="0" {...register("modules.wpRating")} />
             </Field>
             <Field label="Quantity of defective modules" error={errors.modules?.defectiveQty?.message}>
@@ -398,6 +399,9 @@ export default function Wizard({
                 </Field>
                 <Field label="Mode of unloading" error={errors.defect?.unloadingMode?.message}>
                   <input className={inputCls} placeholder="e.g. Manual / Crane / Forklift" {...register("defect.unloadingMode")} />
+                </Field>
+                <Field label="Serial no of module (for reference)" required error={errors.defect?.transitSerialRef?.message}>
+                  <input className={`${inputCls} tnum`} {...register("defect.transitSerialRef")} />
                 </Field>
                 <div className="sm:col-span-2">
                   <Field label="Description of breakage" required error={errors.defect?.description?.message} hint="Minimum 50 characters: what broke, how many modules, visible damage">

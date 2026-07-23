@@ -152,6 +152,7 @@ export default async function ComplaintDetail({
                     : []),
                 ]
               : [
+                  ["Serial no of module", c.transitSerialRef],
                   ["Material received", fmtDate(c.receivedDate)],
                   ["Mode of delivery", label(c.deliveryMode)],
                   ["Vehicle number", c.vehicleNumber],
