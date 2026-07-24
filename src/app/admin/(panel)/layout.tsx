@@ -11,9 +11,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <>
       <SiteHeader homeHref="/admin">
-        <span className="rounded-full bg-pe-navy px-2.5 py-1 text-xs font-semibold text-white">
-          {session.role === "ADMIN" ? "Admin" : "Agent"}
-        </span>
         <span className="hidden text-sm text-muted sm:inline">{session.name}</span>
         <form action={logoutAction}>
           <button type="submit" className={btnGhost}>
