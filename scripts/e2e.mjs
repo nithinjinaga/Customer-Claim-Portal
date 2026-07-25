@@ -61,6 +61,14 @@ check("valid complaint passes schema", complaintSchema.safeParse(validInput).suc
   const bad = clone(validInput); bad.attachments = [];
   check("evidence image required", !complaintSchema.safeParse(bad).success);
 }
+{
+  const bad = clone(validInput); bad.attachments[0].storagePath = "../../secret";
+  check("attachment path traversal rejected", !complaintSchema.safeParse(bad).success);
+}
+{
+  const bad = clone(validInput); bad.attachments[0].mimeType = "text/html";
+  check("attachment disallowed mime rejected", !complaintSchema.safeParse(bad).success);
+}
 
 // ===========================================================================
 // 2. Complaint ID generation + daily sequence

@@ -44,8 +44,20 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { fileName, mimeType, sizeBytes, kind, thumbnail } = await req.json();
-  if (typeof fileName !== "string" || typeof mimeType !== "string" || typeof sizeBytes !== "number") {
+  let body: Record<string, unknown>;
+  try {
+    body = (await req.json()) as Record<string, unknown>;
+  } catch {
+    return NextResponse.json({ error: "Malformed JSON body" }, { status: 400 });
+  }
+  const { fileName, mimeType, sizeBytes, kind, thumbnail } = body ?? {};
+  if (
+    typeof fileName !== "string" ||
+    typeof mimeType !== "string" ||
+    typeof sizeBytes !== "number" ||
+    !Number.isFinite(sizeBytes) ||
+    sizeBytes <= 0
+  ) {
     return NextResponse.json({ error: "Bad request" }, { status: 400 });
   }
 

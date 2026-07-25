@@ -53,6 +53,7 @@ export async function logoutAction() {
 }
 
 export async function forgotPasswordAction(email: string): Promise<{ ok: true }> {
+  if (typeof email !== "string") return { ok: true }; // no enumeration on bad input
   const user = await db.user.findUnique({ where: { email: email.trim().toLowerCase() } });
   if (user) {
     const token = randomBytes(32).toString("hex");
@@ -72,10 +73,14 @@ export async function resetPasswordAction(
   const parsed = passwordSchema.safeParse(password);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
+  const invalidLink = { error: "This reset link is invalid or has expired. Request a new one." };
+  // Reset tokens are 64-char hex; reject anything else before hitting the DB.
+  if (typeof token !== "string" || !/^[a-f0-9]{64}$/.test(token)) return invalidLink;
+
   const user = await db.user.findFirst({
     where: { resetToken: token, resetTokenExpiry: { gt: new Date() } },
   });
-  if (!user) return { error: "This reset link is invalid or has expired. Request a new one." };
+  if (!user) return invalidLink;
 
   await db.user.update({
     where: { id: user.id },

@@ -85,13 +85,40 @@ export const defectSchema = z
     message: "Serial no of module is required",
   });
 
+// Client-side upload constraints (also re-checked server-side in the upload route)
+export const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+export const VIDEO_TYPES = ["video/mp4", "video/quicktime"];
+export const INVOICE_TYPES = ["application/pdf", ...IMAGE_TYPES];
+export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+export const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
+export const MAX_INVOICE_BYTES = 25 * 1024 * 1024;
+export const MAX_EVIDENCE_FILES = 10;
+
+const ALLOWED_MIME = new Set([...IMAGE_TYPES, ...VIDEO_TYPES, ...INVOICE_TYPES]);
+
+// Storage keys we generate look like "anon/<uuid>-<safeName>": slash-separated
+// [A-Za-z0-9._-] segments. Reject traversal ("..") / absolute paths / odd charsets
+// so a client can't point an attachment at an arbitrary object in the bucket.
+const storageKey = z
+  .string()
+  .min(1)
+  .max(200)
+  .regex(/^(?!.*\.\.)[A-Za-z0-9][A-Za-z0-9._/-]*$/, "Invalid storage path");
+
+// Attachment metadata is client-supplied (uploads go direct to storage), so every
+// field is validated: mime against the allowlist, path against traversal, size
+// capped, and the display name stripped of path separators / control chars.
 const attachmentMeta = z.object({
   kind: z.enum(["INVOICE", "EVIDENCE"]),
-  storagePath: z.string().min(1),
-  thumbPath: z.string().optional(),
-  mimeType: z.string().min(1),
-  sizeBytes: z.number().int().positive(),
-  originalName: z.string().min(1),
+  storagePath: storageKey,
+  thumbPath: storageKey.optional(),
+  mimeType: z.string().refine((m) => ALLOWED_MIME.has(m), "Unsupported file type"),
+  sizeBytes: z.number().int().positive().max(MAX_VIDEO_BYTES),
+  originalName: z
+    .string()
+    .min(1)
+    .transform((s) => s.replace(/[/\\]/g, "_").replace(/[\x00-\x1f]/g, "").slice(0, 120))
+    .pipe(z.string().min(1, "Invalid file name")),
 });
 
 export const attachmentsRelaxedSchema = z.array(attachmentMeta).max(11); // 10 evidence + 1 invoice
@@ -117,12 +144,3 @@ export const complaintFormSchema = z.object({
 });
 
 export type ComplaintInput = z.infer<typeof complaintSchema>;
-
-// Client-side upload constraints (also re-checked server-side)
-export const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
-export const VIDEO_TYPES = ["video/mp4", "video/quicktime"];
-export const INVOICE_TYPES = ["application/pdf", ...IMAGE_TYPES];
-export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-export const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
-export const MAX_INVOICE_BYTES = 25 * 1024 * 1024;
-export const MAX_EVIDENCE_FILES = 10;
