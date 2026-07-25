@@ -2,7 +2,12 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
 const COOKIE = "pe_session";
-const secret = () => new TextEncoder().encode(process.env.JWT_SECRET!);
+const secret = () => {
+  const s = process.env.JWT_SECRET;
+  // Fail loudly rather than signing with the bytes of "undefined" (a known key).
+  if (!s) throw new Error("JWT_SECRET is not set");
+  return new TextEncoder().encode(s);
+};
 
 export type Session = {
   sub: string;

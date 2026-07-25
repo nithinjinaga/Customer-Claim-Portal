@@ -12,6 +12,10 @@ import {
   MAX_INVOICE_BYTES,
 } from "@/lib/validation";
 
+// Signed-URL request throttle: 60 per minute per IP.
+const UPLOAD_LIMIT = 60;
+const UPLOAD_WINDOW_MS = 60_000;
+
 export async function GET() {
   return NextResponse.json({
     configured:
@@ -33,7 +37,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Cap signed-URL requests per IP to prevent storage-bucket abuse.
-  if (!rateLimit(`upload:${await clientIpHash()}`, 60, 60_000)) {
+  if (!rateLimit(`upload:${await clientIpHash()}`, UPLOAD_LIMIT, UPLOAD_WINDOW_MS)) {
     return NextResponse.json(
       { error: "Too many upload requests. Please slow down." },
       { status: 429 },

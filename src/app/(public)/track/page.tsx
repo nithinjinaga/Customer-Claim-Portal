@@ -10,6 +10,10 @@ export const dynamic = "force-dynamic";
 
 const STEPS = ["SUBMITTED", "UNDER_REVIEW", "IN_PROGRESS", "RESOLVED"] as const;
 
+// Unlock (email/phone second factor) throttle: 10 attempts per 10 minutes per IP.
+const UNLOCK_LIMIT = 10;
+const UNLOCK_WINDOW_MS = 10 * 60_000;
+
 // Last 10 digits, ignoring +91 / spaces / dashes.
 const normPhone = (p: string) => p.replace(/\D/g, "").slice(-10);
 
@@ -50,7 +54,7 @@ export default async function TrackPage({
 
   // Throttle unlock attempts per IP (complaint IDs are guessable; this blocks
   // brute-forcing the email/phone second factor).
-  const unlockBlocked = !!k && !rateLimit(`unlock:${await clientIpHash()}`, 10, 10 * 60_000);
+  const unlockBlocked = !!k && !rateLimit(`unlock:${await clientIpHash()}`, UNLOCK_LIMIT, UNLOCK_WINDOW_MS);
   const unlocked = !unlockBlocked && !!(complaint && k && contactMatches(complaint, k));
 
   return (
