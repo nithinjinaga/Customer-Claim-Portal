@@ -80,12 +80,21 @@ export async function POST(req: NextRequest) {
 
   const safeName = fileName.replace(/[^\w.\-]+/g, "_").slice(-80);
   const base = `${owner}/${randomUUID()}`;
-  const upload = await createSignedUploadUrl(`${base}-${safeName}`);
-  const thumb = thumbnail ? await createSignedUploadUrl(`${base}-thumb.jpg`) : null;
+  try {
+    const upload = await createSignedUploadUrl(`${base}-${safeName}`);
+    const thumb = thumbnail ? await createSignedUploadUrl(`${base}-thumb.jpg`) : null;
 
-  return NextResponse.json({
-    path: upload.path,
-    signedUrl: upload.signedUrl,
-    thumb: thumb ? { path: thumb.path, signedUrl: thumb.signedUrl } : null,
-  });
+    return NextResponse.json({
+      path: upload.path,
+      signedUrl: upload.signedUrl,
+      thumb: thumb ? { path: thumb.path, signedUrl: thumb.signedUrl } : null,
+    });
+  } catch (e) {
+    // Most often: the "complaints" storage bucket hasn't been created in Supabase.
+    console.error("[upload-url] createSignedUploadUrl failed:", e);
+    return NextResponse.json(
+      { error: "Could not prepare the upload. File storage may not be set up correctly." },
+      { status: 500 },
+    );
+  }
 }

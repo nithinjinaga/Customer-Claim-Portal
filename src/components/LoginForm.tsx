@@ -24,9 +24,16 @@ export default function LoginForm({ staff = false }: { staff?: boolean }) {
   const onSubmit = handleSubmit(async (data) => {
     setSubmitting(true);
     setServerError(undefined);
-    const res = await loginAction(data);
-    if (res?.error) {
-      setServerError(res.error);
+    try {
+      const res = await loginAction(data);
+      // Success redirects server-side (navigation happens); only errors return here.
+      if (res?.error) {
+        setServerError(res.error);
+        setSubmitting(false);
+      }
+    } catch {
+      // A thrown server action (e.g. missing env var) would otherwise hang the button forever.
+      setServerError("Something went wrong. Please try again.");
       setSubmitting(false);
     }
   });

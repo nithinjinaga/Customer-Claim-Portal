@@ -109,7 +109,7 @@ export function validateFile(file: File, kind: "INVOICE" | "EVIDENCE"): string |
   const isVideo = file.type.startsWith("video/");
   if (kind === "INVOICE") {
     if (!INVOICE_TYPES.includes(file.type)) return "Invoice must be a PDF or image (JPG/PNG/WEBP)";
-    if (file.size > MAX_INVOICE_BYTES) return "Invoice file exceeds 10MB";
+    if (file.size > MAX_INVOICE_BYTES) return "Invoice file exceeds 25MB";
     return null;
   }
   if (isVideo) {
@@ -351,7 +351,7 @@ export function InvoiceUpload({
           onClick={() => inputRef.current?.click()}
           className="rounded-card border-2 border-dashed border-line bg-surface px-4 py-3 text-sm text-muted hover:border-pe-blue"
         >
-          Upload invoice copy (PDF or image, max 10MB)
+          Upload invoice copy (PDF or image, max 25MB)
         </button>
       )}
       <input
