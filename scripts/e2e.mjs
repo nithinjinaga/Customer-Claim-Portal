@@ -76,8 +76,8 @@ check("valid complaint passes schema", complaintSchema.safeParse(validInput).suc
 const id1 = await db.$transaction(nextComplaintId);
 const id2 = await db.$transaction(nextComplaintId);
 const id3 = await db.$transaction(nextComplaintId);
-check("complaint ID format PEDDMMYYYYNN", /^PE\d{10,}$/.test(id1), id1);
-check("daily sequence increments", parseInt(id2.slice(10), 10) === parseInt(id1.slice(10), 10) + 1, `${id1} -> ${id2}`);
+check("complaint ID format PEDDMMYYNN", /^PE\d{8,}$/.test(id1), id1);
+check("daily sequence increments", parseInt(id2.slice(8), 10) === parseInt(id1.slice(8), 10) + 1, `${id1} -> ${id2}`);
 
 // ===========================================================================
 // 3. Seed anonymous complaints (userId null + contact snapshot)

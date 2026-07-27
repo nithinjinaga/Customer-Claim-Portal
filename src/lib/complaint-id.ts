@@ -1,18 +1,18 @@
 import type { Prisma } from "@prisma/client";
 
-/** "DDMMYYYY" in Asia/Kolkata, independent of server timezone. */
+/** "DDMMYY" in Asia/Kolkata, independent of server timezone. */
 export function istDateKey(): string {
   const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Asia/Kolkata",
     day: "2-digit",
     month: "2-digit",
-    year: "numeric",
+    year: "2-digit",
   }).formatToParts(new Date());
   const get = (t: string) => parts.find((p) => p.type === t)!.value;
   return `${get("day")}${get("month")}${get("year")}`;
 }
 
-/** PE + DDMMYYYY + per-day sequence (2-digit padded, grows past 99). Call inside a transaction. */
+/** PE + DDMMYY + per-day sequence (2-digit padded, grows past 99). Call inside a transaction. */
 export async function nextComplaintId(tx: Prisma.TransactionClient): Promise<string> {
   const dateKey = istDateKey();
   const counter = await tx.dailyCounter.upsert({

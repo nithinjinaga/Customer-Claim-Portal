@@ -87,13 +87,13 @@ model User {
 }
 
 model DailyCounter {
-  date    String @id // "DDMMYYYY"
+  date    String @id // "DDMMYY"
   counter Int    @default(0)
 }
 
 model Complaint {
   id          Int             @id @default(autoincrement())
-  complaintId String          @unique // PEDDMMYYYYNN
+  complaintId String          @unique // PEDDMMYYNN
   userId      String?         // null for anonymous (not-logged-in) filings
   user        User?           @relation(fields: [userId], references: [id])
   status      ComplaintStatus @default(SUBMITTED)

@@ -51,8 +51,8 @@ Customers have no accounts. Staff (ADMIN/AGENT) are created via
 
 ## Complaint IDs
 
-`PE` + `DDMMYYYY` + per-day sequence (IST), e.g. 11th complaint on 17-07-2026 →
-`PE1707202611`. Generated race-free in `src/lib/complaint-id.ts` via the
+`PE` + `DDMMYY` + per-day sequence (IST), e.g. 11th complaint on 17-07-2026 →
+`PE17072611`. Generated race-free in `src/lib/complaint-id.ts` via the
 `DailyCounter` table.
 
 ## Complaint wizard — redesign notes
