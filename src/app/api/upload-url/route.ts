@@ -90,10 +90,11 @@ export async function POST(req: NextRequest) {
       thumb: thumb ? { path: thumb.path, signedUrl: thumb.signedUrl } : null,
     });
   } catch (e) {
-    // Most often: the "complaints" storage bucket hasn't been created in Supabase.
+    // TEMP DIAGNOSTIC: surface the raw storage error to the client so we can see
+    // why createSignedUploadUrl fails on Vercel. Revert to a generic message after.
     console.error("[upload-url] createSignedUploadUrl failed:", e);
     return NextResponse.json(
-      { error: "Could not prepare the upload. File storage may not be set up correctly." },
+      { error: `Upload prep failed: ${e instanceof Error ? e.message : String(e)}` },
       { status: 500 },
     );
   }
