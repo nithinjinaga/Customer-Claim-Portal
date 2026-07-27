@@ -36,7 +36,7 @@ const get = async (path, cookie) => {
 // ===========================================================================
 const validInput = {
   contact: { name: "A B", email: "a@b.com", phone: "9876543210", altPhone: "" },
-  site: { siteAddress: "Plot 42, Solar Park, Shamshabad", siteCapacityKwp: "12.5", gridType: "", commissionedDate: "", invoiceNumber: "INV-1" },
+  site: { siteAddress: "Plot 42, Solar Park, Shamshabad", siteCapacityAc: "10 KWp", siteCapacityDc: "12.5 KWp", gridType: "", commissionedDate: "", invoiceNumber: "INV-1" },
   modules: { serialNumbers: ["PE23A00112233"], moduleModel: "", wpRating: "545", defectiveQty: "" },
   defect: { defectType: "TECHNICAL_FAULT", description: "x".repeat(60), transitSerialRef: "" },
   attachments: [{ kind: "EVIDENCE", storagePath: "p/x.jpg", mimeType: "image/jpeg", sizeBytes: 100, originalName: "e.jpg" }],
@@ -44,7 +44,7 @@ const validInput = {
 const clone = (o) => structuredClone(o);
 check("valid complaint passes schema", complaintSchema.safeParse(validInput).success);
 {
-  const bad = clone(validInput); bad.site.siteCapacityKwp = "";
+  const bad = clone(validInput); bad.site.siteCapacityDc = "";
   check("site capacity required", !complaintSchema.safeParse(bad).success);
 }
 {
@@ -89,7 +89,7 @@ const base = {
   userId: null,
   customerName: "E2E Anon", customerEmail: "e2e-anon@test.local", customerPhone: "9876500001",
   siteAddress: "Plot 42, Solar Park, Shamshabad, Hyderabad 501218",
-  siteCapacityKwp: 12.5, gridType: "ON_GRID", commissionedDate: new Date("2025-11-20"),
+  siteCapacityAc: "10 KWp", siteCapacityDc: "12.5 KWp", gridType: "ON_GRID", commissionedDate: new Date("2025-11-20"),
   invoiceNumber: "INV-7788", serialNumbers: ["PE23A00112233", "PE23A00112234"],
   wpRating: 545, defectiveQty: 2,
   statusEvents: { create: { status: "SUBMITTED" } },

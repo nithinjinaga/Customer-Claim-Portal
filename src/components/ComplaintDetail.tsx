@@ -1,5 +1,5 @@
 import type { Attachment, Complaint, StatusEvent } from "@prisma/client";
-import { Card, StatusBadge, STATUS_LABEL } from "@/components/ui";
+import { Card, StatusBadge, STATUS_LABEL, DEFECT_LABEL } from "@/components/ui";
 import { getSignedUrl } from "@/lib/storage";
 import Gallery, { type GalleryItem } from "@/components/Gallery";
 
@@ -110,8 +110,12 @@ export default async function ComplaintDetail({
         <h2 className="mb-3 text-sm font-semibold text-pe-navy">Site details</h2>
         <Rows
           rows={[
+            ["Project name", c.projectName],
+            ["Project type", label(c.projectType)],
+            ["O&M by", c.omBy],
             ["Site address", c.siteAddress],
-            ["Site capacity", c.siteCapacityKwp != null ? `${c.siteCapacityKwp} KWp` : "—"],
+            ["AC capacity", c.siteCapacityAc],
+            ["DC capacity", c.siteCapacityDc],
             ["Grid type", label(c.gridType)],
             ["Plant commissioned", fmtDate(c.commissionedDate)],
             ["Invoice number", c.invoiceNumber],
@@ -139,25 +143,25 @@ export default async function ComplaintDetail({
 
       <Card>
         <h2 className="mb-3 text-sm font-semibold text-pe-navy">
-          Defect report: {c.defectType === "TECHNICAL_FAULT" ? "Technical Fault" : "Transit Breakage"}
+          Defect report: {DEFECT_LABEL[c.defectType] ?? c.defectType}
         </h2>
         <Rows
           rows={
-            c.defectType === "TECHNICAL_FAULT"
+            c.defectType === "TRANSIT_BREAKAGE"
               ? [
-                  ["Defect first noticed", fmtDate(c.defectNoticedDate)],
-                  ["Inspected by technician", c.technicianInspected == null ? "—" : c.technicianInspected ? "Yes" : "No"],
-                  ...(c.technicianInspected
-                    ? ([["Technician's findings", c.technicianFindings]] as [string, React.ReactNode][])
-                    : []),
-                ]
-              : [
                   ["Serial no of module", c.transitSerialRef],
                   ["Material received", fmtDate(c.receivedDate)],
                   ["Mode of delivery", label(c.deliveryMode)],
                   ["Vehicle number", c.vehicleNumber],
                   ["Transporter", c.transporterName],
                   ["Mode of unloading", c.unloadingMode],
+                ]
+              : [
+                  ["Defect first noticed", fmtDate(c.defectNoticedDate)],
+                  ["Inspected by technician", c.technicianInspected == null ? "—" : c.technicianInspected ? "Yes" : "No"],
+                  ...(c.technicianInspected
+                    ? ([["Technician's findings", c.technicianFindings]] as [string, React.ReactNode][])
+                    : []),
                 ]
           }
         />

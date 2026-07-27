@@ -166,3 +166,9 @@ export const IconUser = ({ className }: IconProps) => (
     <path d="M5 20a7 7 0 0 1 14 0" />
   </S>
 );
+
+export const IconBolt = ({ className }: IconProps) => (
+  <S className={className}>
+    <path d="M13 3 4 14h6l-1 7 9-11h-6l1-7Z" />
+  </S>
+);

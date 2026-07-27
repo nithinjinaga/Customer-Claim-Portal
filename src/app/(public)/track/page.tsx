@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { Card, StatusBadge, STATUS_LABEL, Alert } from "@/components/ui";
+import { Card, StatusBadge, STATUS_LABEL, DEFECT_LABEL, Alert } from "@/components/ui";
 import { IconCheck } from "@/components/icons";
 import ComplaintDetail from "@/components/ComplaintDetail";
 import { clientIpHash, rateLimit } from "@/lib/rate-limit";
@@ -34,6 +34,46 @@ function contactMatches(
   return false;
 }
 
+/** Horizontal step tracker (Submitted → Under Review → In Progress → Resolved). */
+function StatusStepper({ status }: { status: string }) {
+  const reachedIdx = STEPS.indexOf(status as (typeof STEPS)[number]);
+  return (
+    <ol className="mt-7 flex items-start">
+      {STEPS.map((step, i) => {
+        const isDone = i <= reachedIdx;
+        const isNext = i === reachedIdx + 1;
+        return (
+          <li key={step} className="flex flex-1 items-center last:flex-none">
+            <div className="flex flex-col items-center">
+              <span
+                className={`tnum flex h-[34px] w-[34px] items-center justify-center rounded-full text-[13px] font-semibold ${
+                  isDone
+                    ? "bg-pe-green text-white"
+                    : isNext
+                      ? "border-2 border-pe-blue bg-card text-pe-navy ring-4 ring-pe-blue/20"
+                      : "border border-input bg-surface text-muted"
+                }`}
+              >
+                {isDone ? <IconCheck className="h-4 w-4" /> : i + 1}
+              </span>
+              <span
+                className={`mt-2 w-16 text-center text-[10px] font-semibold uppercase leading-tight tracking-wide ${
+                  isDone || isNext ? "text-pe-navy" : "text-muted"
+                }`}
+              >
+                {STATUS_LABEL[step]}
+              </span>
+            </div>
+            {i < STEPS.length - 1 && (
+              <div className={`mx-1.5 mt-4 h-0.5 flex-1 rounded ${i < reachedIdx ? "bg-pe-green" : "bg-line"}`} />
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
 export default async function TrackPage({
   searchParams,
 }: {
@@ -64,6 +104,32 @@ export default async function TrackPage({
         Enter your Complaint ID to check the status of your after-sales request.
       </p>
       <TrackSearch defaultId={complaintId ?? ""} />
+
+      {/* Sample preview — shown until the user searches; replaced by the real status card. */}
+      {!complaintId && (
+        <Card className="mt-6 border-dashed">
+          <div className="flex flex-wrap items-center justify-between gap-3 opacity-60">
+            <div>
+              <p className="text-xs uppercase tracking-widest text-muted">Complaint</p>
+              <p className="tnum text-lg font-bold text-muted">PE00000000000</p>
+            </div>
+            <StatusBadge status="SUBMITTED" />
+          </div>
+          <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-line pt-4 text-sm opacity-60">
+            <div>
+              <dt className="text-xs text-muted">Raised on</dt>
+              <dd className="font-medium text-muted">—</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted">Defect type</dt>
+              <dd className="font-medium text-muted">—</dd>
+            </div>
+          </dl>
+          <div className="opacity-60">
+            <StatusStepper status="SUBMITTED" />
+          </div>
+        </Card>
+      )}
 
       {complaintId && !complaint && (
         <div className="mt-6">
@@ -100,7 +166,7 @@ export default async function TrackPage({
             <div>
               <dt className="text-xs text-muted">Defect type</dt>
               <dd className="font-medium">
-                {complaint.defectType === "TECHNICAL_FAULT" ? "Technical Fault" : "Transit Breakage"}
+                {DEFECT_LABEL[complaint.defectType] ?? complaint.defectType}
               </dd>
             </div>
           </dl>
@@ -115,40 +181,7 @@ export default async function TrackPage({
               </Alert>
             </div>
           ) : (
-            <ol className="mt-7 flex items-start">
-              {STEPS.map((step, i) => {
-                const reachedIdx = STEPS.indexOf(complaint.status as (typeof STEPS)[number]);
-                const isDone = i <= reachedIdx;
-                const isNext = i === reachedIdx + 1;
-                return (
-                  <li key={step} className="flex flex-1 items-center last:flex-none">
-                    <div className="flex flex-col items-center">
-                      <span
-                        className={`tnum flex h-[34px] w-[34px] items-center justify-center rounded-full text-[13px] font-semibold ${
-                          isDone
-                            ? "bg-pe-green text-white"
-                            : isNext
-                              ? "border-2 border-pe-blue bg-card text-pe-navy ring-4 ring-pe-blue/20"
-                              : "border border-input bg-surface text-muted"
-                        }`}
-                      >
-                        {isDone ? <IconCheck className="h-4 w-4" /> : i + 1}
-                      </span>
-                      <span
-                        className={`mt-2 w-16 text-center text-[10px] font-semibold uppercase leading-tight tracking-wide ${
-                          isDone || isNext ? "text-pe-navy" : "text-muted"
-                        }`}
-                      >
-                        {STATUS_LABEL[step]}
-                      </span>
-                    </div>
-                    {i < STEPS.length - 1 && (
-                      <div className={`mx-1.5 mt-4 h-0.5 flex-1 rounded ${i < reachedIdx ? "bg-pe-green" : "bg-line"}`} />
-                    )}
-                  </li>
-                );
-              })}
-            </ol>
+            <StatusStepper status={complaint.status} />
           )}
 
           <div className="mt-6 border-t border-line pt-4">

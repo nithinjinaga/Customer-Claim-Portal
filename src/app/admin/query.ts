@@ -10,7 +10,7 @@ export type AdminFilters = {
 };
 
 const STATUSES = ["SUBMITTED", "UNDER_REVIEW", "IN_PROGRESS", "RESOLVED", "REJECTED"];
-const DEFECTS = ["TECHNICAL_FAULT", "TRANSIT_BREAKAGE"];
+const DEFECTS = ["TECHNICAL_FAULT", "TRANSIT_BREAKAGE", "VISUAL", "ELECTRICAL", "MECHANICAL"];
 
 export function buildWhere(f: AdminFilters, session: Session): Prisma.ComplaintWhereInput {
   const where: Prisma.ComplaintWhereInput = {};

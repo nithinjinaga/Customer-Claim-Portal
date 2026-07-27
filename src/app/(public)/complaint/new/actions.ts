@@ -9,7 +9,7 @@ import {
   internalNewComplaintEmail,
   esc,
 } from "@/lib/email";
-import { STATUS_LABEL } from "@/components/ui";
+import { STATUS_LABEL, DEFECT_LABEL } from "@/components/ui";
 
 import { nextComplaintId } from "@/lib/complaint-id";
 
@@ -60,13 +60,12 @@ export async function submitComplaint(
     });
   });
 
-  const defectLabel =
-    defect.defectType === "TECHNICAL_FAULT" ? "Technical Fault" : "Transit Breakage";
+  const defectLabel = DEFECT_LABEL[defect.defectType] ?? defect.defectType;
   const dash = (v: unknown) => (v === undefined || v === null || v === "" ? "—" : String(v));
   const summaryHtml = `<table style="width:100%;font-size:13px;line-height:1.8">
     <tr><td style="color:#5b6b7b">Defect type</td><td><strong>${defectLabel}</strong></td></tr>
     <tr><td style="color:#5b6b7b">Site</td><td>${esc(site.siteAddress)}</td></tr>
-    <tr><td style="color:#5b6b7b">Capacity</td><td>${dash(site.siteCapacityKwp)} KWp</td></tr>
+    <tr><td style="color:#5b6b7b">Capacity (AC / DC)</td><td>${esc(dash(site.siteCapacityAc))} / ${esc(dash(site.siteCapacityDc))}</td></tr>
     <tr><td style="color:#5b6b7b">Defective modules</td><td>${dash(modules.defectiveQty)} × ${dash(modules.wpRating)} Wp</td></tr>
     <tr><td style="color:#5b6b7b">Serial numbers</td><td>${modules.serialNumbers.map(esc).join(", ")}</td></tr>
     <tr><td style="color:#5b6b7b">Status</td><td>${STATUS_LABEL[complaint.status]}</td></tr>

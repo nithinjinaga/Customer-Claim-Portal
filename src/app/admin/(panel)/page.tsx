@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { buildWhere, type AdminFilters } from "../query";
-import { Card, StatusBadge, STATUS_LABEL, inputCls, btnPrimary, btnGhost } from "@/components/ui";
+import { Card, StatusBadge, STATUS_LABEL, DEFECT_LABEL, inputCls, btnPrimary, btnGhost } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -98,8 +98,11 @@ export default async function AdminDashboard({
           </select>
           <select name="defect" defaultValue={filters.defect ?? ""} className={inputCls}>
             <option value="">All defects</option>
-            <option value="TECHNICAL_FAULT">Technical Fault</option>
-            <option value="TRANSIT_BREAKAGE">Transit Breakage</option>
+            {Object.entries(DEFECT_LABEL).map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
+              </option>
+            ))}
           </select>
           <input type="date" name="from" defaultValue={filters.from ?? ""} className={inputCls} aria-label="From date" />
           <input type="date" name="to" defaultValue={filters.to ?? ""} className={inputCls} aria-label="To date" />
@@ -146,7 +149,7 @@ export default async function AdminDashboard({
                     <p className="text-xs text-muted">{c.user?.email ?? c.customerEmail ?? "—"}</p>
                   </td>
                   <td className="px-4 py-3">
-                    {c.defectType === "TECHNICAL_FAULT" ? "Technical" : "Transit"}
+                    {DEFECT_LABEL[c.defectType] ?? c.defectType}
                   </td>
                   <td className="px-4 py-3">{c.assignedTo?.name ?? <span className="text-muted">—</span>}</td>
                   <td className="px-4 py-3">

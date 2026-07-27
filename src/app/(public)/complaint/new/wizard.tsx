@@ -18,7 +18,8 @@ import {
   IconCheck,
   IconCheckCircle,
   IconWrench,
-  IconTruck,
+  IconImage,
+  IconBolt,
   IconTrash,
   IconDownload,
   IconArrowRight,
@@ -62,10 +63,20 @@ const emptyValues = (contact?: ContactDefaults): FormValues =>
       phone: contact?.phone ?? "",
       altPhone: contact?.altPhone ?? "",
     },
-    site: { siteAddress: "", siteCapacityKwp: "", gridType: "", commissionedDate: "", invoiceNumber: "" },
+    site: {
+      projectName: "",
+      projectType: "",
+      omBy: "",
+      siteAddress: "",
+      siteCapacityAc: "",
+      siteCapacityDc: "",
+      gridType: "",
+      commissionedDate: "",
+      invoiceNumber: "",
+    },
     modules: { serialNumbers: [""], moduleModel: "", wpRating: "", defectiveQty: "" },
     defect: {
-      defectType: "TECHNICAL_FAULT",
+      defectType: "VISUAL",
       description: "",
       defectNoticedDate: "",
       technicianInspected: "",
@@ -213,7 +224,7 @@ export default function Wizard({
   const wv = watch();
   const done_: Record<SectionKey, boolean> = {
     contact: !!(wv.contact?.name?.trim() && wv.contact?.email?.trim() && wv.contact?.phone?.trim()),
-    site: !!(wv.site?.siteAddress?.trim() && wv.site?.invoiceNumber?.trim() && String(wv.site?.siteCapacityKwp ?? "").trim()),
+    site: !!(wv.site?.siteAddress?.trim() && wv.site?.invoiceNumber?.trim() && wv.site?.siteCapacityAc?.trim() && wv.site?.siteCapacityDc?.trim()),
     modules: serials.some((x) => x.trim().length >= 3) && !!String(wv.modules?.wpRating ?? "").trim(),
     defect: (wv.defect?.description ?? "").trim().length >= 50,
     evidence: evidence.length > 0,
@@ -284,6 +295,12 @@ export default function Wizard({
             <Field label="Alternate number" error={errors.contact?.altPhone?.message}>
               <input className={inputCls} type="tel" {...register("contact.altPhone")} />
             </Field>
+            <Field label="Project type" required error={errors.site?.projectType?.message}>
+              <Segmented options={[["ROOFTOP", "Rooftop"], ["GROUND_MOUNT", "Ground Mount"], ["FLOATING", "Floating"]]} {...register("site.projectType")} />
+            </Field>
+            <Field label="O&M by" required error={errors.site?.omBy?.message} hint="Who handles operations & maintenance">
+              <input className={inputCls} {...register("site.omBy")} />
+            </Field>
           </div>
         </Section>
 
@@ -291,15 +308,23 @@ export default function Wizard({
         <Section id="site" step={2} Icon={IconMapPin} title="Site details">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
+              <Field label="Project name / Site name" error={errors.site?.projectName?.message}>
+                <input className={inputCls} {...register("site.projectName")} />
+              </Field>
+            </div>
+            <Field label="Site capacity (AC)" required error={errors.site?.siteCapacityAc?.message} hint="Include the unit, e.g. 10 KWp or 1.2 MWp">
+              <input className={`${inputCls} tnum`} placeholder="e.g. 10 KWp" {...register("site.siteCapacityAc")} />
+            </Field>
+            <Field label="Site capacity (DC)" required error={errors.site?.siteCapacityDc?.message} hint="Include the unit, e.g. 12.5 KWp or 1.5 MWp">
+              <input className={`${inputCls} tnum`} placeholder="e.g. 12.5 KWp" {...register("site.siteCapacityDc")} />
+            </Field>
+            <div className="sm:col-span-2">
               <Field label="Site location / address" required error={errors.site?.siteAddress?.message}>
                 <textarea className={inputCls} rows={2} {...register("site.siteAddress")} />
               </Field>
             </div>
             <Field label="Invoice number" required error={errors.site?.invoiceNumber?.message}>
               <input className={inputCls} {...register("site.invoiceNumber")} />
-            </Field>
-            <Field label="Site capacity (KWp)" required error={errors.site?.siteCapacityKwp?.message}>
-              <input className={`${inputCls} tnum`} type="number" step="any" min="0" {...register("site.siteCapacityKwp")} />
             </Field>
             <Field label="Grid type" error={errors.site?.gridType?.message}>
               <Segmented options={[["ON_GRID", "ON Grid"], ["OFF_GRID", "OFF Grid"]]} {...register("site.gridType")} />
@@ -414,12 +439,12 @@ export default function Wizard({
                 <Field label="When was the defect first noticed?" error={errors.defect?.defectNoticedDate?.message}>
                   <input className={inputCls} type="date" max={today} {...register("defect.defectNoticedDate")} />
                 </Field>
-                <Field label="Inspected by a local technician?" error={errors.defect?.technicianInspected?.message}>
+                <Field label="Inspected by EPC Team?" error={errors.defect?.technicianInspected?.message}>
                   <Segmented options={[["true", "Yes"], ["false", "No"]]} {...register("defect.technicianInspected")} />
                 </Field>
                 {String(inspected) === "true" && (
                   <div className="sm:col-span-2">
-                    <Field label="Technician's findings" error={errors.defect?.technicianFindings?.message}>
+                    <Field label="EPC Team findings" error={errors.defect?.technicianFindings?.message}>
                       <textarea className={inputCls} rows={3} {...register("defect.technicianFindings")} />
                     </Field>
                   </div>
@@ -512,7 +537,7 @@ function Segmented({ options, ...reg }: { options: [string, string][] } & Reg) {
       {options.map(([value, label]) => (
         <label key={value} className="cursor-pointer">
           <input type="radio" value={value} {...reg} className="peer sr-only" />
-          <span className="block rounded-full border border-input bg-card px-4 py-2 text-sm font-medium text-ink transition-colors hover:border-pe-green/60 peer-checked:border-pe-green peer-checked:bg-pe-green/10 peer-checked:text-pe-navy peer-focus-visible:ring-2 peer-focus-visible:ring-pe-green/30">
+          <span className="block rounded-full border-2 border-input bg-card px-4 py-2 text-sm font-medium text-ink transition-all hover:border-pe-green/60 peer-checked:border-pe-green peer-checked:bg-pe-green peer-checked:text-white peer-checked:shadow-sm peer-checked:shadow-pe-green/30 peer-focus-visible:ring-2 peer-focus-visible:ring-pe-green/40">
             {label}
           </span>
         </label>
@@ -522,18 +547,19 @@ function Segmented({ options, ...reg }: { options: [string, string][] } & Reg) {
 }
 
 const DEFECT_CARDS = [
-  { v: "TECHNICAL_FAULT", l: "Technical Fault", d: "Underperformance, hotspots, cell cracks, or electrical faults", Icon: IconWrench },
-  { v: "TRANSIT_BREAKAGE", l: "Transit Breakage", d: "Physical damage that occurred during shipping or delivery", Icon: IconTruck },
+  { v: "VISUAL", l: "Visual", d: "Discoloration, browning, snail trails, delamination, or other visible defects", Icon: IconImage },
+  { v: "ELECTRICAL", l: "Electrical", d: "Underperformance, hotspots, connector or junction-box faults", Icon: IconBolt },
+  { v: "MECHANICAL", l: "Mechanical", d: "Cell cracks, glass breakage, frame or structural damage", Icon: IconWrench },
 ] as const;
 
 /** Large radio-cards for the primary defect-type choice. */
 function DefectTypeCards(reg: Reg) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className="grid gap-3 sm:grid-cols-3">
       {DEFECT_CARDS.map(({ v, l, d, Icon }) => (
-        <label key={v} className="cursor-pointer">
+        <label key={v} className="relative block cursor-pointer">
           <input type="radio" value={v} {...reg} className="peer sr-only" />
-          <span className="flex h-full items-start gap-3 rounded-2xl border border-line bg-card p-4 transition-colors hover:border-pe-green/50 peer-checked:border-pe-green peer-checked:bg-pe-green/5 peer-focus-visible:ring-2 peer-focus-visible:ring-pe-green/30">
+          <span className="flex h-full items-start gap-3 rounded-2xl border-2 border-line bg-card p-4 pr-9 transition-all hover:border-pe-green/50 peer-checked:border-pe-green peer-checked:bg-pe-green/10 peer-checked:shadow-md peer-checked:shadow-pe-green/20 peer-focus-visible:ring-2 peer-focus-visible:ring-pe-green/40">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-pe-blue/10 text-pe-blue">
               <Icon className="h-5 w-5" />
             </span>
@@ -541,6 +567,9 @@ function DefectTypeCards(reg: Reg) {
               <span className="block text-sm font-semibold text-pe-navy">{l}</span>
               <span className="mt-0.5 block text-xs text-muted">{d}</span>
             </span>
+          </span>
+          <span className="pointer-events-none absolute right-3 top-3 flex h-5 w-5 scale-50 items-center justify-center rounded-full bg-pe-green text-white opacity-0 transition-all peer-checked:scale-100 peer-checked:opacity-100">
+            <IconCheck className="h-3.5 w-3.5" />
           </span>
         </label>
       ))}
@@ -572,8 +601,12 @@ function buildSummary(id: string, v: FormValues, invoice: AttachmentMeta | null,
     line("Alternate", c.altPhone),
     ``,
     `SITE`,
+    line("Project name", s.projectName),
+    line("Project type", s.projectType),
+    line("O&M by", s.omBy),
     line("Address", s.siteAddress),
-    line("Capacity (KWp)", s.siteCapacityKwp),
+    line("Capacity (AC)", s.siteCapacityAc),
+    line("Capacity (DC)", s.siteCapacityDc),
     line("Grid type", s.gridType),
     line("Commissioned", s.commissionedDate),
     line("Invoice number", s.invoiceNumber),

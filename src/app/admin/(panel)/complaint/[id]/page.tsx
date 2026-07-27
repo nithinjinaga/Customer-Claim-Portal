@@ -46,13 +46,8 @@ export default async function AdminComplaintPage({
 
       <aside className="flex flex-col gap-5 lg:pt-9">
         <Card>
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-pe-navy">
+          <h2 className="text-sm font-semibold text-pe-navy">
             Customer
-            {!complaint.user && (
-              <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted">
-                Not logged in
-              </span>
-            )}
           </h2>
           <dl className="mt-2 text-sm">
             <dd className="font-medium">{complaint.user?.name ?? complaint.customerName ?? "—"}</dd>

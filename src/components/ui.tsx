@@ -72,6 +72,14 @@ export const STATUS_LABEL: Record<string, string> = {
   REJECTED: "Rejected",
 };
 
+export const DEFECT_LABEL: Record<string, string> = {
+  TECHNICAL_FAULT: "Technical Fault",
+  TRANSIT_BREAKAGE: "Transit Breakage",
+  VISUAL: "Visual",
+  ELECTRICAL: "Electrical",
+  MECHANICAL: "Mechanical",
+};
+
 export function StatusBadge({ status }: { status: string }) {
   const color = {
     SUBMITTED: "bg-blue-50 text-status-submitted border-status-submitted/30",

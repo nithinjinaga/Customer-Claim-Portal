@@ -38,6 +38,15 @@ enum GridType {
 enum DefectType {
   TECHNICAL_FAULT
   TRANSIT_BREAKAGE
+  VISUAL
+  ELECTRICAL
+  MECHANICAL
+}
+
+enum ProjectType {
+  ROOFTOP
+  GROUND_MOUNT
+  FLOATING
 }
 
 enum DeliveryMode {
@@ -99,8 +108,12 @@ model Complaint {
   submitterIpHash  String? // hashed IP, for anti-abuse rate limiting
 
   // Site details
+  projectName      String?
+  projectType      ProjectType?
+  omBy             String? // O&M by
   siteAddress      String
-  siteCapacityKwp  Float?
+  siteCapacityAc   String? // value + unit as typed, e.g. "10 KWp"
+  siteCapacityDc   String?
   gridType         GridType?
   commissionedDate DateTime?
   invoiceNumber    String

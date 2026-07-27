@@ -34,12 +34,12 @@ const blankable = <T extends z.ZodTypeAny>(inner: T) =>
 
 const optInt = blankable(z.coerce.number().int().min(1, "At least 1"));
 const optPastDate = blankable(pastDate());
-const optString = blankable(z.string().trim().min(1));
+const optString = blankable(z.string().trim().min(1).max(200, "Too long (max 200 characters)"));
 
 // Who's filing — required for both anon and logged-in (prefilled) submissions.
 export const contactSchema = z.object({
-  name: z.string().trim().min(2, "Your name is required"),
-  email: z.string().trim().toLowerCase().email("Enter a valid email"),
+  name: z.string().trim().min(2, "Your name is required").max(100, "Name is too long"),
+  email: z.string().trim().toLowerCase().max(254, "Email is too long").email("Enter a valid email"),
   phone: phoneSchema,
   altPhone: z
     .union([z.literal(""), phoneSchema])
@@ -48,18 +48,23 @@ export const contactSchema = z.object({
 });
 
 export const siteSchema = z.object({
-  siteAddress: z.string().trim().min(10, "Enter the full site address"),
-  siteCapacityKwp: z.coerce.number().positive("Enter the site capacity in KWp"),
+  projectName: optString,
+  projectType: z.enum(["ROOFTOP", "GROUND_MOUNT", "FLOATING"], { error: "Select the project type" }),
+  omBy: z.string().trim().min(1, "O&M by is required").max(200, "Too long"),
+  siteAddress: z.string().trim().min(10, "Enter the full site address").max(300, "Address is too long"),
+  siteCapacityAc: z.string().trim().min(1, "Enter the AC capacity").max(40, "Capacity is too long"),
+  siteCapacityDc: z.string().trim().min(1, "Enter the DC capacity").max(40, "Capacity is too long"),
   gridType: blankable(z.enum(["ON_GRID", "OFF_GRID"])),
   commissionedDate: optPastDate,
-  invoiceNumber: z.string().trim().min(2, "Invoice number is required"),
+  invoiceNumber: z.string().trim().min(2, "Invoice number is required").max(60, "Invoice number is too long"),
 });
 
 export const modulesSchema = z.object({
   serialNumbers: z
-    .array(z.string().trim().min(3, "Serial number too short"))
-    .min(1, "Add at least one serial number"),
-  moduleModel: z.string().trim().optional(),
+    .array(z.string().trim().min(3, "Serial number too short").max(64, "Serial number too long"))
+    .min(1, "Add at least one serial number")
+    .max(200, "Too many serial numbers"),
+  moduleModel: z.string().trim().max(100, "Module model is too long").optional(),
   wpRating: z.coerce.number().positive("Enter the Wp rating"),
   defectiveQty: optInt,
 });
@@ -68,11 +73,11 @@ export const modulesSchema = z.object({
 // for Transit Breakage (enforced by the refine below).
 export const defectSchema = z
   .object({
-    defectType: z.enum(["TECHNICAL_FAULT", "TRANSIT_BREAKAGE"]),
-    description: z.string().trim().min(50, "Describe the problem in at least 50 characters"),
+    defectType: z.enum(["TECHNICAL_FAULT", "TRANSIT_BREAKAGE", "VISUAL", "ELECTRICAL", "MECHANICAL"]),
+    description: z.string().trim().min(50, "Describe the problem in at least 50 characters").max(5000, "Description is too long (max 5000 characters)"),
     defectNoticedDate: optPastDate,
     technicianInspected: blankable(z.preprocess((v) => v === true || v === "true", z.boolean())),
-    technicianFindings: z.string().trim().optional(),
+    technicianFindings: z.string().trim().max(2000, "Findings too long (max 2000 characters)").optional(),
     receivedDate: optPastDate,
     deliveryMode: blankable(z.enum(["ON_ROAD", "BY_AIR", "BY_SEA"])),
     vehicleNumber: optString,
@@ -91,7 +96,7 @@ export const VIDEO_TYPES = ["video/mp4", "video/quicktime"];
 export const INVOICE_TYPES = ["application/pdf", ...IMAGE_TYPES];
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 export const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
-export const MAX_INVOICE_BYTES = 25 * 1024 * 1024;
+export const MAX_INVOICE_BYTES = 10 * 1024 * 1024;
 export const MAX_EVIDENCE_FILES = 10;
 
 const ALLOWED_MIME = new Set([...IMAGE_TYPES, ...VIDEO_TYPES, ...INVOICE_TYPES]);

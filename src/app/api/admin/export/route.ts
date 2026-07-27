@@ -35,7 +35,8 @@ export async function GET(req: NextRequest) {
 
   const header = [
     "Complaint ID", "Date", "Status", "Customer", "Email", "Phone", "Company",
-    "Customer Type", "Defect Type", "Site Address", "Capacity (KWp)", "Grid Type",
+    "Customer Type", "Defect Type", "Project Name", "Project Type", "O&M By",
+    "Site Address", "AC Capacity", "DC Capacity", "Grid Type",
     "Commissioned", "Invoice No", "Module Model", "Wp Rating", "Defective Qty",
     "Serial Numbers", "Description", "Assigned To",
   ];
@@ -50,8 +51,12 @@ export async function GET(req: NextRequest) {
       c.user?.company ?? "",
       c.user?.customerType ?? "",
       c.defectType,
+      c.projectName,
+      c.projectType,
+      c.omBy,
       c.siteAddress,
-      c.siteCapacityKwp,
+      c.siteCapacityAc,
+      c.siteCapacityDc,
       c.gridType,
       c.commissionedDate ? c.commissionedDate.toISOString().slice(0, 10) : "",
       c.invoiceNumber,
