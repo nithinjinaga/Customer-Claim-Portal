@@ -111,7 +111,7 @@ export default async function TrackPage({
           <div className="flex flex-wrap items-center justify-between gap-3 opacity-60">
             <div>
               <p className="text-xs uppercase tracking-widest text-muted">Complaint</p>
-              <p className="tnum text-lg font-bold text-muted">PE00000000000</p>
+              <p className="tnum text-lg font-bold text-muted">PE00000000</p>
             </div>
             <StatusBadge status="SUBMITTED" />
           </div>

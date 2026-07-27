@@ -129,7 +129,7 @@ check("landing 200 + tagline", r.status === 200 && r.body.includes("Customer Ser
 r = await get(`/track?id=${id1}`);
 check("tracker finds complaint (status only)", r.status === 200 && r.body.includes(id1) && r.body.includes("Technical Fault"));
 check("tracker hides PII until unlocked", !r.body.includes("e2e-anon@test.local") && !r.body.includes("PE23A00112233"));
-r = await get("/track?id=PE0101202099");
+r = await get("/track?id=PE01012099");
 check("tracker handles unknown ID", r.body.includes("No complaint found"));
 const storageOn = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
 r = await get("/api/upload-url");

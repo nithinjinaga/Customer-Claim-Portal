@@ -23,7 +23,7 @@ export default function TrackSearch({ defaultId }: { defaultId: string }) {
         value={id}
         onChange={(e) => setId(e.target.value)}
         required
-        placeholder="Complaint ID, e.g. PE1707202601"
+        placeholder="Complaint ID, e.g. PE17072601"
         className={`${inputCls} tnum uppercase`}
         aria-label="Complaint ID"
       />
