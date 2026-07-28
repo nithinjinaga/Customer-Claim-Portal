@@ -449,7 +449,7 @@ export default function Wizard({
                 </div>
               )}
               <div className="sm:col-span-2">
-                <Field label="Describe the full problem in as much detail as possible" required error={errors.defect?.description?.message} hint="Minimum 50 characters: symptoms, error readings, affected output">
+                <Field label="Describe the problem - symptoms, readings, and impact on output" required error={errors.defect?.description?.message} hint="Minimum 50 characters">
                   <textarea className={inputCls} rows={4} {...register("defect.description")} />
                 </Field>
               </div>
