@@ -1,5 +1,6 @@
 "use server";
 
+import { after } from "next/server";
 import { db } from "@/lib/db";
 import { clientIpHash } from "@/lib/rate-limit";
 import { complaintSchema, attachmentsRelaxedSchema } from "@/lib/validation";
@@ -74,27 +75,34 @@ export async function submitComplaint(
     <tr><td style="color:#5b6b7b">Status</td><td>${STATUS_LABEL[complaint.status]}</td></tr>
   </table>`;
 
-  await sendEmail(
-    contact.email,
-    `Complaint ${complaint.complaintId} registered · Premier Energies`,
-    complaintConfirmationEmail(contact.name, complaint.complaintId, summaryHtml),
-  );
   const internal = process.env.AFTER_SALES_EMAIL;
-  if (internal) {
-    await sendEmail(
-      internal,
-      `[New complaint] ${complaint.complaintId} · ${defectLabel} · ${contact.name}`,
-      internalNewComplaintEmail(
-        complaint.complaintId,
-        summaryHtml +
-          `<p style="font-size:13px;margin:12px 0 0">Customer: ${esc(contact.name)} · ${esc(contact.email)} · ${esc(contact.phone)}</p>` +
-          defects
-            .map((d) => `<p style="font-size:13px;margin:4px 0 0"><strong>${esc(DEFECT_LABEL[d.defectType] ?? d.defectType)}:</strong> ${esc(d.description)}</p>`)
-            .join("") +
-          `<p style="font-size:13px;margin:4px 0 0">Full description: ${esc(defect.description)}</p>`,
+  // Send emails after the response is returned — don't make the user wait on Resend.
+  after(() =>
+    Promise.allSettled([
+      sendEmail(
+        contact.email,
+        `Complaint ${complaint.complaintId} registered · Premier Energies`,
+        complaintConfirmationEmail(contact.name, complaint.complaintId, summaryHtml),
       ),
-    );
-  }
+      ...(internal
+        ? [
+            sendEmail(
+              internal,
+              `[New complaint] ${complaint.complaintId} · ${defectLabel} · ${contact.name}`,
+              internalNewComplaintEmail(
+                complaint.complaintId,
+                summaryHtml +
+                  `<p style="font-size:13px;margin:12px 0 0">Customer: ${esc(contact.name)} · ${esc(contact.email)} · ${esc(contact.phone)}</p>` +
+                  defects
+                    .map((d) => `<p style="font-size:13px;margin:4px 0 0"><strong>${esc(DEFECT_LABEL[d.defectType] ?? d.defectType)}:</strong> ${esc(d.description)}</p>`)
+                    .join("") +
+                  `<p style="font-size:13px;margin:4px 0 0">Full description: ${esc(defect.description)}</p>`,
+              ),
+            ),
+          ]
+        : []),
+    ]),
+  );
 
   return { complaintId: complaint.complaintId };
 }

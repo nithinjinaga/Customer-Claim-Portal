@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { db } from "@/lib/db";
 import { getSession, type Session } from "@/lib/auth";
 import { sendEmail, statusUpdateEmail } from "@/lib/email";
@@ -50,14 +51,17 @@ export async function updateStatusAction(formData: FormData) {
     });
     const email = complaint.user?.email ?? complaint.customerEmail;
     if (email) {
-      await sendEmail(
-        email,
-        `Update on complaint ${complaint.complaintId} · ${STATUS_LABEL[status]}`,
-        statusUpdateEmail(
-          complaint.user?.name ?? complaint.customerName ?? "Customer",
-          complaint.complaintId,
-          STATUS_LABEL[status],
-          note,
+      // Notify after the response returns — don't block the status update on Resend.
+      after(() =>
+        sendEmail(
+          email,
+          `Update on complaint ${complaint.complaintId} · ${STATUS_LABEL[status]}`,
+          statusUpdateEmail(
+            complaint.user?.name ?? complaint.customerName ?? "Customer",
+            complaint.complaintId,
+            STATUS_LABEL[status],
+            note,
+          ),
         ),
       );
     }

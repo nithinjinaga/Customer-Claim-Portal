@@ -51,6 +51,15 @@ function esc(s: string) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+// Cap external email calls so a hung Resend request can't keep a deferred task alive.
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`timed out after ${ms}ms`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer)) as Promise<T>;
+}
+
 export async function sendEmail(to: string, subject: string, html: string) {
   const key = process.env.RESEND_API_KEY;
   if (!key) {
@@ -58,14 +67,21 @@ export async function sendEmail(to: string, subject: string, html: string) {
     return;
   }
   const resend = new Resend(key);
-  const { error } = await resend.emails.send({
-    from: process.env.EMAIL_FROM ?? "Premier Energies <onboarding@resend.dev>",
-    to,
-    subject,
-    html,
-    attachments: logoAttachment(),
-  });
-  if (error) console.error("[email] send failed:", error);
+  try {
+    const { error } = await withTimeout(
+      resend.emails.send({
+        from: process.env.EMAIL_FROM ?? "Premier Energies <onboarding@resend.dev>",
+        to,
+        subject,
+        html,
+        attachments: logoAttachment(),
+      }),
+      8000,
+    );
+    if (error) console.error("[email] send failed:", error);
+  } catch (e) {
+    console.error("[email] send timed out or failed:", e);
+  }
 }
 
 // --- Templates ---

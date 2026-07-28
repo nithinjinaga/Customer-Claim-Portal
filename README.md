@@ -1,4 +1,4 @@
-# Premier Energies — Customer Service Portal
+# Premier Energies - Customer Service Portal
 
 Complaint/ticket portal for Premier Energies solar module customers: raise
 defect complaints (technical fault / transit breakage) through a multi-step
