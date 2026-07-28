@@ -149,7 +149,9 @@ export default async function AdminDashboard({
                     <p className="text-xs text-muted">{c.user?.email ?? c.customerEmail ?? "—"}</p>
                   </td>
                   <td className="px-4 py-3">
-                    {DEFECT_LABEL[c.defectType] ?? c.defectType}
+                    {(c.defectTypes?.length ? c.defectTypes : [c.defectType])
+                      .map((t) => DEFECT_LABEL[t] ?? t)
+                      .join(", ")}
                   </td>
                   <td className="px-4 py-3">{c.assignedTo?.name ?? <span className="text-muted">—</span>}</td>
                   <td className="px-4 py-3">

@@ -124,8 +124,11 @@ model Complaint {
   wpRating      Float?
   defectiveQty  Int?
 
-  // Defect report (nullable variant columns per defectType)
+  // Defect report — defectType kept for back-compat; defectTypes/defectDetails
+  // hold the multi-select (each selected type + its own description).
   defectType          DefectType
+  defectTypes         DefectType[]  @default([])
+  defectDetails       Json?         // { VISUAL: "…", ELECTRICAL: "…" } per-defect descriptions
   description         String
   defectNoticedDate   DateTime?
   technicianInspected Boolean?

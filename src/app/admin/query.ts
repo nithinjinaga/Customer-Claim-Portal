@@ -16,7 +16,10 @@ export function buildWhere(f: AdminFilters, session: Session): Prisma.ComplaintW
   const where: Prisma.ComplaintWhereInput = {};
   if (session.role === "AGENT") where.assignedToId = session.sub; // agents see assigned only
   if (f.status && STATUSES.includes(f.status)) where.status = f.status as never;
-  if (f.defect && DEFECTS.includes(f.defect)) where.defectType = f.defect as never;
+  // Match new rows (defectTypes array) and legacy rows (scalar defectType). Kept in
+  // AND so it composes with the `q` OR-group below instead of overwriting it.
+  if (f.defect && DEFECTS.includes(f.defect))
+    where.AND = [{ OR: [{ defectTypes: { has: f.defect as never } }, { defectType: f.defect as never }] }];
   // Ignore unparseable dates rather than passing an Invalid Date to Prisma.
   const from = f.from ? new Date(f.from) : null;
   const to = f.to ? new Date(`${f.to}T23:59:59`) : null;

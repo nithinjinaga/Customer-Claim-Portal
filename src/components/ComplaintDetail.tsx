@@ -142,33 +142,42 @@ export default async function ComplaintDetail({
       </Card>
 
       <Card>
-        <h2 className="mb-3 text-sm font-semibold text-pe-navy">
-          Defect report: {DEFECT_LABEL[c.defectType] ?? c.defectType}
-        </h2>
-        <Rows
-          rows={
-            c.defectType === "TRANSIT_BREAKAGE"
-              ? [
-                  ["Serial no of module", c.transitSerialRef],
-                  ["Material received", fmtDate(c.receivedDate)],
-                  ["Mode of delivery", label(c.deliveryMode)],
-                  ["Vehicle number", c.vehicleNumber],
-                  ["Transporter", c.transporterName],
-                  ["Mode of unloading", c.unloadingMode],
-                ]
-              : [
+        {(() => {
+          const types = c.defectTypes?.length ? c.defectTypes : [c.defectType];
+          const details = (c.defectDetails ?? {}) as unknown as Record<string, string>;
+          return (
+            <>
+              <h2 className="mb-3 text-sm font-semibold text-pe-navy">
+                Defect report: {types.map((t) => DEFECT_LABEL[t] ?? t).join(", ")}
+              </h2>
+              {types.some((t) => details[t]) && (
+                <div className="mb-3 flex flex-col gap-2">
+                  {types
+                    .filter((t) => details[t])
+                    .map((t) => (
+                      <div key={t}>
+                        <p className="text-xs text-muted">{DEFECT_LABEL[t] ?? t}</p>
+                        <p className="whitespace-pre-wrap text-sm">{details[t]}</p>
+                      </div>
+                    ))}
+                </div>
+              )}
+              <Rows
+                rows={[
                   ["Defect first noticed", fmtDate(c.defectNoticedDate)],
-                  ["Inspected by technician", c.technicianInspected == null ? "—" : c.technicianInspected ? "Yes" : "No"],
+                  ["Inspected by EPC team", c.technicianInspected == null ? "—" : c.technicianInspected ? "Yes" : "No"],
                   ...(c.technicianInspected
-                    ? ([["Technician's findings", c.technicianFindings]] as [string, React.ReactNode][])
+                    ? ([["EPC team findings", c.technicianFindings]] as [string, React.ReactNode][])
                     : []),
-                ]
-          }
-        />
-        <div className="mt-3 border-t border-line pt-3">
-          <p className="text-xs text-muted">Description</p>
-          <p className="mt-1 whitespace-pre-wrap text-sm">{c.description}</p>
-        </div>
+                ]}
+              />
+              <div className="mt-3 border-t border-line pt-3">
+                <p className="text-xs text-muted">Full problem description</p>
+                <p className="mt-1 whitespace-pre-wrap text-sm">{c.description}</p>
+              </div>
+            </>
+          );
+        })()}
       </Card>
 
       <Card>

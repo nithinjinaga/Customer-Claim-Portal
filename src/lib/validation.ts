@@ -55,7 +55,7 @@ export const siteSchema = z.object({
   siteCapacityAc: z.string().trim().min(1, "Enter the AC capacity").max(40, "Capacity is too long"),
   siteCapacityDc: z.string().trim().min(1, "Enter the DC capacity").max(40, "Capacity is too long"),
   gridType: blankable(z.enum(["ON_GRID", "OFF_GRID"])),
-  commissionedDate: optPastDate,
+  commissionedDate: pastDate(),
   invoiceNumber: z.string().trim().min(2, "Invoice number is required").max(60, "Invoice number is too long"),
 });
 
@@ -64,31 +64,29 @@ export const modulesSchema = z.object({
     .array(z.string().trim().min(3, "Serial number too short").max(64, "Serial number too long"))
     .min(1, "Add at least one serial number")
     .max(200, "Too many serial numbers"),
-  moduleModel: z.string().trim().max(100, "Module model is too long").optional(),
   wpRating: z.coerce.number().positive("Enter the Wp rating"),
   defectiveQty: optInt,
 });
 
-// defectType + description are always required; transitSerialRef is required only
-// for Transit Breakage (enforced by the refine below).
-export const defectSchema = z
-  .object({
-    defectType: z.enum(["TECHNICAL_FAULT", "TRANSIT_BREAKAGE", "VISUAL", "ELECTRICAL", "MECHANICAL"]),
-    description: z.string().trim().min(50, "Describe the problem in at least 50 characters").max(5000, "Description is too long (max 5000 characters)"),
-    defectNoticedDate: optPastDate,
-    technicianInspected: blankable(z.preprocess((v) => v === true || v === "true", z.boolean())),
-    technicianFindings: z.string().trim().max(2000, "Findings too long (max 2000 characters)").optional(),
-    receivedDate: optPastDate,
-    deliveryMode: blankable(z.enum(["ON_ROAD", "BY_AIR", "BY_SEA"])),
-    vehicleNumber: optString,
-    transporterName: optString,
-    unloadingMode: optString,
-    transitSerialRef: optString,
-  })
-  .refine((d) => d.defectType !== "TRANSIT_BREAKAGE" || !!d.transitSerialRef, {
-    path: ["transitSerialRef"],
-    message: "Serial no of module is required",
-  });
+// Complaint-level defect fields (the overall description + when-noticed / inspection).
+// The selected defect types and their per-type descriptions live in `defectsSchema`.
+export const defectSchema = z.object({
+  description: z.string().trim().min(50, "Describe the problem in at least 50 characters").max(5000, "Description is too long (max 5000 characters)"),
+  defectNoticedDate: pastDate(),
+  technicianInspected: blankable(z.preprocess((v) => v === true || v === "true", z.boolean())),
+  technicianFindings: z.string().trim().max(2000, "Findings too long (max 2000 characters)").optional(),
+});
+
+// Multi-select: one or more defect types, each with its own description.
+export const defectsSchema = z
+  .array(
+    z.object({
+      defectType: z.enum(["VISUAL", "ELECTRICAL", "MECHANICAL"]),
+      description: z.string().trim().min(15, "Describe this defect (at least 15 characters)").max(2000, "Too long (max 2000 characters)"),
+    }),
+  )
+  .min(1, "Select at least one defect type")
+  .max(3, "Too many defect types");
 
 // Client-side upload constraints (also re-checked server-side in the upload route)
 export const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -133,10 +131,13 @@ export const complaintSchema = z.object({
   site: siteSchema,
   modules: modulesSchema,
   defect: defectSchema,
-  attachments: attachmentsRelaxedSchema.refine(
-    (a) => a.some((f) => f.kind === "EVIDENCE" && f.mimeType.startsWith("image/")),
-    "At least one evidence image is required",
-  ),
+  defects: defectsSchema,
+  attachments: attachmentsRelaxedSchema
+    .refine(
+      (a) => a.some((f) => f.kind === "EVIDENCE" && f.mimeType.startsWith("image/")),
+      "At least one evidence image is required",
+    )
+    .refine((a) => a.some((f) => f.kind === "INVOICE"), "The invoice copy is required"),
 });
 
 // Same shape minus attachments — attachments are managed as separate upload state

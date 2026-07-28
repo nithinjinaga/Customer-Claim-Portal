@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
       c.user?.phone ?? c.customerPhone,
       c.user?.company ?? "",
       c.user?.customerType ?? "",
-      c.defectType,
+      (c.defectTypes?.length ? c.defectTypes : [c.defectType]).join("; "),
       c.projectName,
       c.projectType,
       c.omBy,

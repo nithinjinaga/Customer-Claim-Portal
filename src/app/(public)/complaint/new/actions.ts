@@ -38,7 +38,7 @@ export async function submitComplaint(
       complaintSchema.extend({ attachments: attachmentsRelaxedSchema });
   const parsed = schema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
-  const { contact, site, modules, defect, attachments } = parsed.data;
+  const { contact, site, modules, defect, defects, attachments } = parsed.data;
 
   const complaint = await db.$transaction(async (tx) => {
     const complaintId = await nextComplaintId(tx);
@@ -54,13 +54,16 @@ export async function submitComplaint(
         ...site,
         ...modules,
         ...defect,
+        defectType: defects[0].defectType,
+        defectTypes: defects.map((d) => d.defectType),
+        defectDetails: Object.fromEntries(defects.map((d) => [d.defectType, d.description])),
         attachments: { create: attachments },
         statusEvents: { create: { status: "SUBMITTED" } },
       },
     });
   });
 
-  const defectLabel = DEFECT_LABEL[defect.defectType] ?? defect.defectType;
+  const defectLabel = defects.map((d) => DEFECT_LABEL[d.defectType] ?? d.defectType).join(", ");
   const dash = (v: unknown) => (v === undefined || v === null || v === "" ? "—" : String(v));
   const summaryHtml = `<table style="width:100%;font-size:13px;line-height:1.8">
     <tr><td style="color:#5b6b7b">Defect type</td><td><strong>${defectLabel}</strong></td></tr>
@@ -85,7 +88,10 @@ export async function submitComplaint(
         complaint.complaintId,
         summaryHtml +
           `<p style="font-size:13px;margin:12px 0 0">Customer: ${esc(contact.name)} · ${esc(contact.email)} · ${esc(contact.phone)}</p>` +
-          `<p style="font-size:13px;margin:4px 0 0">Description: ${esc(defect.description)}</p>`,
+          defects
+            .map((d) => `<p style="font-size:13px;margin:4px 0 0"><strong>${esc(DEFECT_LABEL[d.defectType] ?? d.defectType)}:</strong> ${esc(d.description)}</p>`)
+            .join("") +
+          `<p style="font-size:13px;margin:4px 0 0">Full description: ${esc(defect.description)}</p>`,
       ),
     );
   }

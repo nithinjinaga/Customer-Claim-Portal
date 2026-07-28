@@ -36,10 +36,14 @@ const get = async (path, cookie) => {
 // ===========================================================================
 const validInput = {
   contact: { name: "A B", email: "a@b.com", phone: "9876543210", altPhone: "" },
-  site: { siteAddress: "Plot 42, Solar Park, Shamshabad", siteCapacityAc: "10 KWp", siteCapacityDc: "12.5 KWp", gridType: "", commissionedDate: "", invoiceNumber: "INV-1" },
-  modules: { serialNumbers: ["PE23A00112233"], moduleModel: "", wpRating: "545", defectiveQty: "" },
-  defect: { defectType: "TECHNICAL_FAULT", description: "x".repeat(60), transitSerialRef: "" },
-  attachments: [{ kind: "EVIDENCE", storagePath: "p/x.jpg", mimeType: "image/jpeg", sizeBytes: 100, originalName: "e.jpg" }],
+  site: { projectType: "ROOFTOP", omBy: "Self", siteAddress: "Plot 42, Solar Park, Shamshabad", siteCapacityAc: "10 KWp", siteCapacityDc: "12.5 KWp", gridType: "", commissionedDate: "2025-11-20", invoiceNumber: "INV-1" },
+  modules: { serialNumbers: ["PE23A00112233"], wpRating: "545", defectiveQty: "" },
+  defect: { description: "x".repeat(60), defectNoticedDate: "2026-07-01" },
+  defects: [{ defectType: "VISUAL", description: "Visible browning on three modules" }],
+  attachments: [
+    { kind: "INVOICE", storagePath: "p/inv.pdf", mimeType: "application/pdf", sizeBytes: 100, originalName: "inv.pdf" },
+    { kind: "EVIDENCE", storagePath: "p/x.jpg", mimeType: "image/jpeg", sizeBytes: 100, originalName: "e.jpg" },
+  ],
 };
 const clone = (o) => structuredClone(o);
 check("valid complaint passes schema", complaintSchema.safeParse(validInput).success);
@@ -52,13 +56,27 @@ check("valid complaint passes schema", complaintSchema.safeParse(validInput).suc
   check("Wp rating required", !complaintSchema.safeParse(bad).success);
 }
 {
-  const bad = clone(validInput); bad.defect.defectType = "TRANSIT_BREAKAGE"; bad.defect.transitSerialRef = "";
-  check("transit requires reference serial", !complaintSchema.safeParse(bad).success);
-  bad.defect.transitSerialRef = "PE-REF-1";
-  check("transit passes with reference serial", complaintSchema.safeParse(bad).success);
+  const bad = clone(validInput); bad.defects = [];
+  check("at least one defect type required", !complaintSchema.safeParse(bad).success);
 }
 {
-  const bad = clone(validInput); bad.attachments = [];
+  const bad = clone(validInput); bad.defects[0].description = "short";
+  check("per-defect description min length enforced", !complaintSchema.safeParse(bad).success);
+}
+{
+  const bad = clone(validInput); bad.defect.defectNoticedDate = "";
+  check("defect first-noticed date required", !complaintSchema.safeParse(bad).success);
+}
+{
+  const bad = clone(validInput); bad.site.commissionedDate = "";
+  check("commissioned date required", !complaintSchema.safeParse(bad).success);
+}
+{
+  const bad = clone(validInput); bad.attachments = bad.attachments.filter((a) => a.kind !== "INVOICE");
+  check("invoice attachment required", !complaintSchema.safeParse(bad).success);
+}
+{
+  const bad = clone(validInput); bad.attachments = bad.attachments.filter((a) => a.kind !== "EVIDENCE");
   check("evidence image required", !complaintSchema.safeParse(bad).success);
 }
 {
@@ -95,19 +113,23 @@ const base = {
   statusEvents: { create: { status: "SUBMITTED" } },
 };
 const c1 = await db.complaint.create({
-  data: { ...base, complaintId: id1, defectType: "TECHNICAL_FAULT",
+  data: { ...base, complaintId: id1,
+    defectType: "VISUAL", defectTypes: ["VISUAL", "ELECTRICAL"],
+    defectDetails: { VISUAL: "Visible browning on three modules near the edge seal.", ELECTRICAL: "Hotspot and underperformance around the junction box." },
     description: "Two modules show severe power degradation and visible hotspot browning near the junction box.",
     defectNoticedDate: new Date("2026-07-01"), technicianInspected: true },
 });
 await db.complaint.create({
-  data: { ...base, complaintId: id2, defectType: "TRANSIT_BREAKAGE",
-    description: "Glass shattered on two modules on arrival; pallet corner crushed during road transport.",
-    receivedDate: new Date("2026-07-10"), deliveryMode: "ON_ROAD", unloadingMode: "Manual",
-    transitSerialRef: "PE-TRANSIT-REF-99" },
+  data: { ...base, complaintId: id2,
+    defectType: "MECHANICAL", defectTypes: ["MECHANICAL"],
+    defectDetails: { MECHANICAL: "Glass shattered on two modules; frame corner bent." },
+    description: "Glass shattered on two modules on arrival; visible cell cracks across the laminate.",
+    defectNoticedDate: new Date("2026-07-10") },
 });
 // Formula-injection probe for the CSV export
 await db.complaint.create({
-  data: { ...base, complaintId: id3, customerName: "=SUM(9+9)", defectType: "TECHNICAL_FAULT",
+  data: { ...base, complaintId: id3, customerName: "=SUM(9+9)",
+    defectType: "VISUAL", defectTypes: ["VISUAL"], defectDetails: { VISUAL: "CSV probe" },
     description: "CSV formula-injection probe complaint, long enough to satisfy the minimum length rule." },
 });
 
@@ -127,7 +149,7 @@ const [custTok, adminTok, agentTok] = await Promise.all([customer, admin, agent]
 let r = await get("/");
 check("landing 200 + tagline", r.status === 200 && r.body.includes("Customer Service Portal"));
 r = await get(`/track?id=${id1}`);
-check("tracker finds complaint (status only)", r.status === 200 && r.body.includes(id1) && r.body.includes("Technical Fault"));
+check("tracker finds complaint (status only)", r.status === 200 && r.body.includes(id1) && r.body.includes("Visual"));
 check("tracker hides PII until unlocked", !r.body.includes("e2e-anon@test.local") && !r.body.includes("PE23A00112233"));
 r = await get("/track?id=PE01012099");
 check("tracker handles unknown ID", r.body.includes("No complaint found"));
@@ -139,7 +161,7 @@ check("upload-url reports storage state", r.body.includes(`"configured":${storag
 // 5. Track unlock (email/phone second factor)
 // ===========================================================================
 r = await get(`/track?id=${id1}&k=${encodeURIComponent("e2e-anon@test.local")}`);
-check("unlock by email reveals full details", r.body.includes("Status timeline") && r.body.includes("PE23A00112233"));
+check("unlock by email reveals full details", r.body.includes("Status timeline") && r.body.includes("PE23A00112233") && r.body.includes("Electrical"));
 r = await get(`/track?id=${id1}&k=9876500001`);
 check("unlock by phone reveals full details", r.body.includes("Status timeline") && r.body.includes("PE23A00112233"));
 r = await get(`/track?id=${id1}&k=${encodeURIComponent("wrong@nope.com")}`);
@@ -171,7 +193,7 @@ r = await get(`/admin/complaint/${id1}`, adminTok);
 check("admin detail shows PII + Status control, no Assignment",
   r.status === 200 && r.body.includes("e2e-anon@test.local") && r.body.includes("Update &amp; notify") && !r.body.includes(">Assignment<"));
 r = await get(`/admin/complaint/${id2}`, adminTok);
-check("admin detail shows transit reference serial", r.body.includes("PE-TRANSIT-REF-99"));
+check("admin detail renders defect report", r.status === 200 && r.body.includes("Mechanical"));
 r = await get(`/admin/complaint/${id2}`, agentTok);
 check("agent blocked from unassigned detail", r.status === 404);
 r = await get("/api/admin/export?q=E2E", adminTok);

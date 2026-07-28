@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { complaintFormSchema } from "@/lib/validation";
 import { submitComplaint } from "./actions";
-import { Field, inputCls, btnGreen, btnGhost, Card, Alert } from "@/components/ui";
+import { Field, inputCls, btnGreen, btnGhost, Card, Alert, DEFECT_LABEL } from "@/components/ui";
 import { EvidenceUpload, InvoiceUpload, type AttachmentMeta } from "./uploads";
 import {
   IconUser,
@@ -52,6 +52,8 @@ export type ContactDefaults = {
   altPhone?: string;
 };
 
+type DefectEntry = { defectType: string; description: string };
+
 type FormValues = z.input<typeof complaintFormSchema>;
 type Errs = ReturnType<typeof useForm<FormValues>>["formState"]["errors"];
 
@@ -74,19 +76,12 @@ const emptyValues = (contact?: ContactDefaults): FormValues =>
       commissionedDate: "",
       invoiceNumber: "",
     },
-    modules: { serialNumbers: [""], moduleModel: "", wpRating: "", defectiveQty: "" },
+    modules: { serialNumbers: [""], wpRating: "", defectiveQty: "" },
     defect: {
-      defectType: "VISUAL",
       description: "",
       defectNoticedDate: "",
       technicianInspected: "",
       technicianFindings: "",
-      receivedDate: "",
-      deliveryMode: "",
-      vehicleNumber: "",
-      transporterName: "",
-      unloadingMode: "",
-      transitSerialRef: "",
     },
   }) as unknown as FormValues;
 
@@ -101,6 +96,8 @@ export default function Wizard({
   const [storageOn, setStorageOn] = useState<boolean | null>(null);
   const [invoice, setInvoice] = useState<AttachmentMeta | null>(null);
   const [evidence, setEvidence] = useState<AttachmentMeta[]>([]);
+  const [defects, setDefects] = useState<DefectEntry[]>([]);
+  const [defectError, setDefectError] = useState<string>();
   const [serials, setSerials] = useState<string[]>([""]);
   const [confirmed, setConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -124,8 +121,8 @@ export default function Wizard({
   });
 
   // Keep latest attachments visible to the autosave subscription without re-subscribing.
-  const attachRef = useRef({ invoice, evidence });
-  attachRef.current = { invoice, evidence };
+  const attachRef = useRef({ invoice, evidence, defects });
+  attachRef.current = { invoice, evidence, defects };
   const doneRef = useRef(false);
   doneRef.current = !!done;
 
@@ -141,6 +138,7 @@ export default function Wizard({
         }
         if (d.invoice) setInvoice(d.invoice);
         if (Array.isArray(d.evidence)) setEvidence(d.evidence);
+        if (Array.isArray(d.defects)) setDefects(d.defects);
       }
     } catch {}
     setRestored(true);
@@ -161,8 +159,8 @@ export default function Wizard({
   }, [restored, watch]);
   useEffect(() => {
     if (!restored || done) return;
-    localStorage.setItem(DRAFT_KEY, JSON.stringify({ values: getValues(), invoice, evidence }));
-  }, [invoice, evidence, restored, done, getValues]);
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ values: getValues(), invoice, evidence, defects }));
+  }, [invoice, evidence, defects, restored, done, getValues]);
 
   // Scrollspy: highlight the section the reader is currently in on the progress rail.
   useEffect(() => {
@@ -193,11 +191,38 @@ export default function Wizard({
     setValue("modules.serialNumbers", next, { shouldValidate: false });
   };
 
+  const toggleDefect = (type: string) => {
+    setDefectError(undefined);
+    setDefects((prev) =>
+      prev.some((e) => e.defectType === type)
+        ? prev.filter((e) => e.defectType !== type)
+        : [...prev, { defectType: type, description: "" }],
+    );
+  };
+  const setDefectDescription = (type: string, description: string) =>
+    setDefects((prev) => prev.map((e) => (e.defectType === type ? { ...e, description } : e)));
+
   if (!restored) return null;
   if (done)
     return <SuccessStep done={done} />;
 
   const onSubmit = handleSubmit(async (data) => {
+    if (defects.length === 0) {
+      setDefectError("Select at least one defect type");
+      document.getElementById("section-defect")?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    if (defects.some((d) => d.description.trim().length < 15)) {
+      setDefectError("Add a description (at least 15 characters) for each selected defect");
+      document.getElementById("section-defect")?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    setDefectError(undefined);
+    if (storageOn && !invoice) {
+      setFormError("Attach your invoice copy before submitting.");
+      document.getElementById("section-site")?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
     if (storageOn && !evidence.some((f) => f.mimeType.startsWith("image/"))) {
       setFormError("Upload at least one photo of the defect before submitting.");
       document.getElementById("section-evidence")?.scrollIntoView({ behavior: "smooth" });
@@ -206,18 +231,17 @@ export default function Wizard({
     setSubmitting(true);
     setFormError(undefined);
     const attachments = [...(invoice ? [invoice] : []), ...evidence];
-    const res = await submitComplaint({ ...data, attachments });
+    const res = await submitComplaint({ ...data, attachments, defects });
     if (res.error || !res.complaintId) {
       setFormError(res.error ?? "Something went wrong. Please try again.");
       setSubmitting(false);
       return;
     }
-    const summary = buildSummary(res.complaintId, data, invoice, evidence);
+    const summary = buildSummary(res.complaintId, data, invoice, evidence, defects);
     localStorage.removeItem(DRAFT_KEY);
     setDone({ id: res.complaintId, summary });
   });
 
-  const defectType = watch("defect.defectType");
   const inspected = watch("defect.technicianInspected");
   const today = new Date().toISOString().slice(0, 10);
 
@@ -226,7 +250,7 @@ export default function Wizard({
     contact: !!(wv.contact?.name?.trim() && wv.contact?.email?.trim() && wv.contact?.phone?.trim()),
     site: !!(wv.site?.siteAddress?.trim() && wv.site?.invoiceNumber?.trim() && wv.site?.siteCapacityAc?.trim() && wv.site?.siteCapacityDc?.trim()),
     modules: serials.some((x) => x.trim().length >= 3) && !!String(wv.modules?.wpRating ?? "").trim(),
-    defect: (wv.defect?.description ?? "").trim().length >= 50,
+    defect: defects.length > 0 && (wv.defect?.description ?? "").trim().length >= 50,
     evidence: evidence.length > 0,
   };
 
@@ -329,11 +353,11 @@ export default function Wizard({
             <Field label="Grid type" error={errors.site?.gridType?.message}>
               <Segmented options={[["ON_GRID", "ON Grid"], ["OFF_GRID", "OFF Grid"]]} {...register("site.gridType")} />
             </Field>
-            <Field label="Plant commissioned date" error={errors.site?.commissionedDate?.message}>
+            <Field label="Plant commissioned date" required error={errors.site?.commissionedDate?.message}>
               <input className={inputCls} type="date" max={today} {...register("site.commissionedDate")} />
             </Field>
             <div className="sm:col-span-2">
-              <Field label="Invoice copy" hint="PDF or image of your purchase invoice">
+              <Field label="Invoice copy" required hint="PDF or image of your purchase invoice">
                 <InvoiceUpload file={invoice} onChange={setInvoice} />
               </Field>
             </div>
@@ -389,10 +413,7 @@ export default function Wizard({
                 </div>
               </Field>
             </div>
-            <Field label="Module model" error={errors.modules?.moduleModel?.message} hint="As printed on the label">
-              <input className={inputCls} {...register("modules.moduleModel")} />
-            </Field>
-            <Field label="Wp Rating (Enter Any one)" required error={errors.modules?.wpRating?.message}>
+            <Field label="Module Wp rating" required error={errors.modules?.wpRating?.message}>
               <input className={`${inputCls} tnum`} type="number" step="any" min="0" {...register("modules.wpRating")} />
             </Field>
             <Field label="Quantity of defective modules" error={errors.modules?.defectiveQty?.message}>
@@ -404,66 +425,46 @@ export default function Wizard({
         {/* 4 — Defect report */}
         <Section id="defect" step={4} Icon={IconAlert} title="Defect report">
           <div className="grid gap-5">
-            <Field label="Type of defect" required error={errors.defect?.defectType?.message}>
-              {DefectTypeCards(register("defect.defectType"))}
-            </Field>
+            <div>
+              <div className="mb-1.5 text-sm font-semibold text-ink">
+                Type of defect <span className="text-status-rejected">*</span>
+              </div>
+              <p className="mb-2 text-xs text-muted">Select all that apply — click a type to open its description box.</p>
+              <DefectTypeChecks selected={defects} onToggle={toggleDefect} onDescribe={setDefectDescription} />
+              {defectError && <p className="mt-1 text-xs text-status-rejected">{defectError}</p>}
+            </div>
 
-            {defectType === "TRANSIT_BREAKAGE" ? (
-              <div className="grid gap-4 rounded-2xl bg-surface p-5 sm:grid-cols-2">
-                <Field label="Material received date" error={errors.defect?.receivedDate?.message}>
-                  <input className={inputCls} type="date" max={today} {...register("defect.receivedDate")} />
-                </Field>
-                <Field label="Mode of delivery" error={errors.defect?.deliveryMode?.message}>
-                  <Segmented options={[["ON_ROAD", "On Road"], ["BY_AIR", "By Air"], ["BY_SEA", "By Sea"]]} {...register("defect.deliveryMode")} />
-                </Field>
-                <Field label="Vehicle number" error={errors.defect?.vehicleNumber?.message}>
-                  <input className={inputCls} {...register("defect.vehicleNumber")} />
-                </Field>
-                <Field label="Transporter name / details" error={errors.defect?.transporterName?.message}>
-                  <input className={inputCls} {...register("defect.transporterName")} />
-                </Field>
-                <Field label="Mode of unloading" error={errors.defect?.unloadingMode?.message}>
-                  <input className={inputCls} placeholder="e.g. Manual / Crane / Forklift" {...register("defect.unloadingMode")} />
-                </Field>
-                <Field label="Serial no of module (for reference)" required error={errors.defect?.transitSerialRef?.message}>
-                  <input className={`${inputCls} tnum`} {...register("defect.transitSerialRef")} />
-                </Field>
+            <div className="grid gap-4 rounded-2xl bg-surface p-5 sm:grid-cols-2">
+              <Field label="When was the defect first noticed?" required error={errors.defect?.defectNoticedDate?.message}>
+                <input className={inputCls} type="date" max={today} {...register("defect.defectNoticedDate")} />
+              </Field>
+              <Field label="Inspected by EPC Team?" error={errors.defect?.technicianInspected?.message}>
+                <Segmented options={[["true", "Yes"], ["false", "No"]]} {...register("defect.technicianInspected")} />
+              </Field>
+              {String(inspected) === "true" && (
                 <div className="sm:col-span-2">
-                  <Field label="Description of breakage" required error={errors.defect?.description?.message} hint="Minimum 50 characters: what broke, how many modules, visible damage">
-                    <textarea className={inputCls} rows={4} {...register("defect.description")} />
+                  <Field label="EPC Team findings" error={errors.defect?.technicianFindings?.message}>
+                    <textarea className={inputCls} rows={3} {...register("defect.technicianFindings")} />
                   </Field>
                 </div>
-              </div>
-            ) : (
-              <div className="grid gap-4 rounded-2xl bg-surface p-5 sm:grid-cols-2">
-                <Field label="When was the defect first noticed?" error={errors.defect?.defectNoticedDate?.message}>
-                  <input className={inputCls} type="date" max={today} {...register("defect.defectNoticedDate")} />
+              )}
+              <div className="sm:col-span-2">
+                <Field label="Describe the full problem in as much detail as possible" required error={errors.defect?.description?.message} hint="Minimum 50 characters: symptoms, error readings, affected output">
+                  <textarea className={inputCls} rows={4} {...register("defect.description")} />
                 </Field>
-                <Field label="Inspected by EPC Team?" error={errors.defect?.technicianInspected?.message}>
-                  <Segmented options={[["true", "Yes"], ["false", "No"]]} {...register("defect.technicianInspected")} />
-                </Field>
-                {String(inspected) === "true" && (
-                  <div className="sm:col-span-2">
-                    <Field label="EPC Team findings" error={errors.defect?.technicianFindings?.message}>
-                      <textarea className={inputCls} rows={3} {...register("defect.technicianFindings")} />
-                    </Field>
-                  </div>
-                )}
-                <div className="sm:col-span-2">
-                  <Field label="Description of problem" required error={errors.defect?.description?.message} hint="Minimum 50 characters: symptoms, error readings, affected output">
-                    <textarea className={inputCls} rows={4} {...register("defect.description")} />
-                  </Field>
-                </div>
               </div>
-            )}
+            </div>
           </div>
         </Section>
 
         {/* 5 — Evidence */}
         <Section id="evidence" step={5} Icon={IconCamera} title="Evidence">
-          <p className="mb-3 text-sm text-muted">
-            Upload clear photos of the defective modules. Close-ups of the damage and the
-            serial-number labels speed up assessment. Videos are welcome if they help.
+          <div className="mb-1.5 text-sm font-semibold text-ink">
+            Photos of the defect <span className="text-status-rejected">*</span>
+          </div>
+          <p className="mb-3 text-xs text-muted">
+            At least one photo required. Close-ups of the damage and serial-number
+            labels speed up assessment. Videos welcome if they help.
           </p>
           <EvidenceUpload files={evidence} onChange={setEvidence} />
         </Section>
@@ -552,27 +553,86 @@ const DEFECT_CARDS = [
   { v: "MECHANICAL", l: "Mechanical", d: "Cell cracks, glass breakage, frame or structural damage", Icon: IconWrench },
 ] as const;
 
-/** Large radio-cards for the primary defect-type choice. */
-function DefectTypeCards(reg: Reg) {
+/** Multi-select defect cards; clicking a type opens a popover box (below the card) for its description. */
+function DefectTypeChecks({
+  selected,
+  onToggle,
+  onDescribe,
+}: {
+  selected: DefectEntry[];
+  onToggle: (type: string) => void;
+  onDescribe: (type: string, description: string) => void;
+}) {
+  const [open, setOpen] = useState<string | null>(null);
+
   return (
     <div className="grid gap-3 sm:grid-cols-3">
-      {DEFECT_CARDS.map(({ v, l, d, Icon }) => (
-        <label key={v} className="relative block cursor-pointer">
-          <input type="radio" value={v} {...reg} className="peer sr-only" />
-          <span className="flex h-full items-start gap-3 rounded-2xl border-2 border-line bg-card p-4 pr-9 transition-all hover:border-pe-green/50 peer-checked:border-pe-green peer-checked:bg-pe-green/10 peer-checked:shadow-md peer-checked:shadow-pe-green/20 peer-focus-visible:ring-2 peer-focus-visible:ring-pe-green/40">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-pe-blue/10 text-pe-blue">
-              <Icon className="h-5 w-5" />
-            </span>
-            <span>
-              <span className="block text-sm font-semibold text-pe-navy">{l}</span>
-              <span className="mt-0.5 block text-xs text-muted">{d}</span>
-            </span>
-          </span>
-          <span className="pointer-events-none absolute right-3 top-3 flex h-5 w-5 scale-50 items-center justify-center rounded-full bg-pe-green text-white opacity-0 transition-all peer-checked:scale-100 peer-checked:opacity-100">
-            <IconCheck className="h-3.5 w-3.5" />
-          </span>
-        </label>
-      ))}
+      {DEFECT_CARDS.map(({ v, l, d, Icon }) => {
+        const entry = selected.find((e) => e.defectType === v);
+        const ok = (entry?.description.trim().length ?? 0) >= 15;
+        return (
+          <div key={v} className="relative flex flex-col gap-1.5">
+            <label className="relative block cursor-pointer">
+              <input
+                type="checkbox"
+                checked={!!entry}
+                onChange={() => {
+                  const wasSelected = !!entry;
+                  onToggle(v);
+                  setOpen(wasSelected ? null : v);
+                }}
+                className="peer sr-only"
+              />
+              <span className="flex h-full items-start gap-3 rounded-2xl border-2 border-line bg-card p-4 pr-9 transition-all hover:border-pe-green/50 peer-checked:border-pe-green peer-checked:bg-pe-green/10 peer-checked:shadow-md peer-checked:shadow-pe-green/20 peer-focus-visible:ring-2 peer-focus-visible:ring-pe-green/40">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-pe-blue/10 text-pe-blue">
+                  <Icon className="h-5 w-5" />
+                </span>
+                <span>
+                  <span className="block text-sm font-semibold text-pe-navy">{l}</span>
+                  <span className="mt-0.5 block text-xs text-muted">{d}</span>
+                </span>
+              </span>
+              <span className="pointer-events-none absolute right-3 top-3 flex h-5 w-5 scale-50 items-center justify-center rounded-full bg-pe-green text-white opacity-0 transition-all peer-checked:scale-100 peer-checked:opacity-100">
+                <IconCheck className="h-3.5 w-3.5" />
+              </span>
+            </label>
+            {entry && (
+              <button
+                type="button"
+                onClick={() => setOpen(open === v ? null : v)}
+                className={`self-start text-xs font-semibold ${ok ? "text-pe-green" : "text-status-rejected"}`}
+              >
+                {ok ? "✓ Description added — edit" : "+ Add description *"}
+              </button>
+            )}
+            {open === v && entry && (
+              <div className="absolute left-0 top-full z-20 mt-2 w-[min(86vw,320px)] rounded-2xl border border-line bg-card p-3 shadow-soft">
+                <div className="text-xs font-semibold text-pe-navy">
+                  Describe this {l} defect <span className="text-status-rejected">*</span>
+                </div>
+                <textarea
+                  className={`${inputCls} mt-1.5`}
+                  rows={3}
+                  autoFocus
+                  placeholder="What you see, how many modules, when it started…"
+                  value={entry.description}
+                  onChange={(e) => onDescribe(v, e.target.value)}
+                />
+                <p className="mt-1 text-xs text-muted">Minimum 15 characters.</p>
+                <div className="mt-2 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setOpen(null)}
+                    className="rounded-full bg-pe-green px-4 py-1.5 text-xs font-semibold text-white hover:bg-pe-green-dark"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -584,7 +644,7 @@ const fmt = (v: unknown) => {
   return String(v).replaceAll("_", " ");
 };
 
-function buildSummary(id: string, v: FormValues, invoice: AttachmentMeta | null, evidence: AttachmentMeta[]): string {
+function buildSummary(id: string, v: FormValues, invoice: AttachmentMeta | null, evidence: AttachmentMeta[], defects: DefectEntry[]): string {
   const c = v.contact as Record<string, unknown>;
   const s = v.site as Record<string, unknown>;
   const m = v.modules as Record<string, unknown>;
@@ -613,14 +673,18 @@ function buildSummary(id: string, v: FormValues, invoice: AttachmentMeta | null,
     ``,
     `MODULES`,
     line("Serial numbers", (m.serialNumbers as string[] | undefined)?.filter(Boolean).join(", ")),
-    line("Model", m.moduleModel),
     line("Wp rating", m.wpRating),
     line("Defective quantity", m.defectiveQty),
     ``,
     `DEFECT`,
-    ...Object.entries(d).map(([k, val]) =>
-      line(k.replace(/([A-Z])/g, " $1").replace(/^./, (ch) => ch.toUpperCase()), val),
-    ),
+    ...defects.flatMap((x) => [
+      `Type: ${DEFECT_LABEL[x.defectType] ?? x.defectType}`,
+      `  ${x.description}`,
+    ]),
+    line("First noticed", d.defectNoticedDate),
+    line("Inspected by EPC team", d.technicianInspected),
+    line("EPC team findings", d.technicianFindings),
+    line("Full problem description", d.description),
     ``,
     `Evidence files: ${evidence.length}${invoice ? " + 1 invoice" : ""}`,
   ].join("\n");

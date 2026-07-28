@@ -166,7 +166,9 @@ export default async function TrackPage({
             <div>
               <dt className="text-xs text-muted">Defect type</dt>
               <dd className="font-medium">
-                {DEFECT_LABEL[complaint.defectType] ?? complaint.defectType}
+                {(complaint.defectTypes?.length ? complaint.defectTypes : [complaint.defectType])
+                  .map((t) => DEFECT_LABEL[t] ?? t)
+                  .join(", ")}
               </dd>
             </div>
           </dl>
