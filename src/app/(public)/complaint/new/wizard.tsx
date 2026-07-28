@@ -345,7 +345,7 @@ export default function Wizard({
               <input className={`${inputCls} tnum`} placeholder="e.g. 12.5 KWp" {...register("site.siteCapacityDc")} />
             </Field>
             <div className="sm:col-span-2">
-              <Field label="Site location / address" required error={errors.site?.siteAddress?.message}>
+              <Field label="Site location / address (with Google Maps link / coordinates)" required error={errors.site?.siteAddress?.message}>
                 <textarea className={inputCls} rows={2} {...register("site.siteAddress")} />
               </Field>
             </div>

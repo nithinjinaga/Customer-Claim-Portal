@@ -119,7 +119,7 @@ export default async function AdminComplaintPage({
                 <p className="whitespace-pre-wrap">{n.body}</p>
                 <p className="mt-1 text-xs text-muted">
                   {n.author.name} ·{" "}
-                  {n.createdAt.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
+                  {n.createdAt.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" })}
                 </p>
               </li>
             ))}

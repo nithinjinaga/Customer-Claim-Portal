@@ -161,7 +161,7 @@ export default async function TrackPage({
           <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-line pt-4 text-sm">
             <div>
               <dt className="text-xs text-muted">Raised on</dt>
-              <dd className="font-medium">{complaint.createdAt.toLocaleDateString("en-IN")}</dd>
+              <dd className="font-medium">{complaint.createdAt.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })}</dd>
             </div>
             <div>
               <dt className="text-xs text-muted">Defect type</dt>

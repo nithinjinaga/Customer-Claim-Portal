@@ -143,7 +143,7 @@ export default async function AdminDashboard({
                       {c.complaintId}
                     </Link>
                   </td>
-                  <td className="px-4 py-3">{c.createdAt.toLocaleDateString("en-IN")}</td>
+                  <td className="px-4 py-3">{c.createdAt.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })}</td>
                   <td className="px-4 py-3">
                     <p className="font-medium">{c.user?.name ?? c.customerName ?? "—"}</p>
                     <p className="text-xs text-muted">{c.user?.email ?? c.customerEmail ?? "—"}</p>

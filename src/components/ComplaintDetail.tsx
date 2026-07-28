@@ -7,7 +7,7 @@ const fmtSize = (b: number) =>
   b >= 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.ceil(b / 1024)} KB`;
 
 const fmtDate = (d: Date | null | undefined) =>
-  d ? d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
+  d ? d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" }) : "—";
 
 const label = (v: string | null | undefined) => (v ? v.replaceAll("_", " ") : "—");
 
@@ -97,7 +97,7 @@ export default async function ComplaintDetail({
                 />
                 <p className="text-sm font-semibold">{STATUS_LABEL[e.status]}</p>
                 <p className="text-xs text-muted">
-                  {e.createdAt.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
+                  {e.createdAt.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" })}
                 </p>
                 {e.note && <p className="mt-1 text-sm text-ink">{e.note}</p>}
               </li>
