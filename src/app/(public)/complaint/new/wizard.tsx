@@ -583,7 +583,7 @@ function DefectTypeChecks({
                 }}
                 className="peer sr-only"
               />
-              <span className="flex h-full items-start gap-3 rounded-2xl border-2 border-line bg-card p-4 pr-9 transition-all hover:border-pe-green/50 peer-checked:border-pe-green peer-checked:bg-pe-green/10 peer-checked:shadow-md peer-checked:shadow-pe-green/20 peer-focus-visible:ring-2 peer-focus-visible:ring-pe-green/40">
+              <span className="flex h-full min-h-[124px] items-start gap-3 rounded-2xl border-2 border-line bg-card p-4 pr-9 transition-all hover:border-pe-green/50 peer-checked:border-pe-green peer-checked:bg-pe-green/10 peer-checked:shadow-md peer-checked:shadow-pe-green/20 peer-focus-visible:ring-2 peer-focus-visible:ring-pe-green/40">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-pe-blue/10 text-pe-blue">
                   <Icon className="h-5 w-5" />
                 </span>
