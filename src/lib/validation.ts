@@ -48,7 +48,7 @@ export const contactSchema = z.object({
 });
 
 export const siteSchema = z.object({
-  projectName: optString,
+  projectName: z.string().trim().min(2, "Project or site name is required").max(200, "Too long (max 200 characters)"),
   projectType: z.enum(["ROOFTOP", "GROUND_MOUNT", "FLOATING"], { error: "Select the project type" }),
   omBy: z.string().trim().min(1, "O&M by is required").max(200, "Too long"),
   siteAddress: z.string().trim().min(10, "Enter the full site address").max(300, "Address is too long"),
@@ -124,7 +124,7 @@ const attachmentMeta = z.object({
     .pipe(z.string().min(1, "Invalid file name")),
 });
 
-export const attachmentsRelaxedSchema = z.array(attachmentMeta).max(11); // 10 evidence + 1 invoice
+export const attachmentsRelaxedSchema = z.array(attachmentMeta).max(12); // 10 evidence + 1 invoice + 1 inverter image
 
 export const complaintSchema = z.object({
   contact: contactSchema,

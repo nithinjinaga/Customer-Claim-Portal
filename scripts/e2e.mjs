@@ -36,7 +36,7 @@ const get = async (path, cookie) => {
 // ===========================================================================
 const validInput = {
   contact: { name: "A B", email: "a@b.com", phone: "9876543210", altPhone: "" },
-  site: { projectType: "ROOFTOP", omBy: "Self", siteAddress: "Plot 42, Solar Park, Shamshabad", siteCapacityAc: "10 KWp", siteCapacityDc: "12.5 KWp", gridType: "", commissionedDate: "2025-11-20", invoiceNumber: "INV-1" },
+  site: { projectName: "Shamshabad Rooftop", projectType: "ROOFTOP", omBy: "Self", siteAddress: "Plot 42, Solar Park, Shamshabad", siteCapacityAc: "10 KWp", siteCapacityDc: "12.5 KWp", gridType: "", commissionedDate: "2025-11-20", invoiceNumber: "INV-1" },
   modules: { serialNumbers: ["PE23A00112233"], wpRating: "545", defectiveQty: "" },
   defect: { description: "x".repeat(60), defectNoticedDate: "2026-07-01" },
   defects: [{ defectType: "VISUAL", description: "Visible browning on three modules" }],

@@ -95,6 +95,7 @@ export default function Wizard({
   const [restored, setRestored] = useState(false);
   const [storageOn, setStorageOn] = useState<boolean | null>(null);
   const [invoice, setInvoice] = useState<AttachmentMeta | null>(null);
+  const [inverterImg, setInverterImg] = useState<AttachmentMeta | null>(null);
   const [evidence, setEvidence] = useState<AttachmentMeta[]>([]);
   const [defects, setDefects] = useState<DefectEntry[]>([]);
   const [defectError, setDefectError] = useState<string>();
@@ -121,8 +122,8 @@ export default function Wizard({
   });
 
   // Keep latest attachments visible to the autosave subscription without re-subscribing.
-  const attachRef = useRef({ invoice, evidence, defects });
-  attachRef.current = { invoice, evidence, defects };
+  const attachRef = useRef({ invoice, inverterImg, evidence, defects });
+  attachRef.current = { invoice, inverterImg, evidence, defects };
   const doneRef = useRef(false);
   doneRef.current = !!done;
 
@@ -137,6 +138,7 @@ export default function Wizard({
           setSerials(d.values.modules?.serialNumbers?.length ? d.values.modules.serialNumbers : [""]);
         }
         if (d.invoice) setInvoice(d.invoice);
+        if (d.inverterImg) setInverterImg(d.inverterImg);
         if (Array.isArray(d.evidence)) setEvidence(d.evidence);
         if (Array.isArray(d.defects)) setDefects(d.defects);
       }
@@ -159,8 +161,8 @@ export default function Wizard({
   }, [restored, watch]);
   useEffect(() => {
     if (!restored || done) return;
-    localStorage.setItem(DRAFT_KEY, JSON.stringify({ values: getValues(), invoice, evidence, defects }));
-  }, [invoice, evidence, defects, restored, done, getValues]);
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ values: getValues(), invoice, inverterImg, evidence, defects }));
+  }, [invoice, inverterImg, evidence, defects, restored, done, getValues]);
 
   // Scrollspy: highlight the section the reader is currently in on the progress rail.
   useEffect(() => {
@@ -230,7 +232,7 @@ export default function Wizard({
     }
     setSubmitting(true);
     setFormError(undefined);
-    const attachments = [...(invoice ? [invoice] : []), ...evidence];
+    const attachments = [...(invoice ? [invoice] : []), ...(inverterImg ? [inverterImg] : []), ...evidence];
     const res = await submitComplaint({ ...data, attachments, defects });
     if (res.error || !res.complaintId) {
       setFormError(res.error ?? "Something went wrong. Please try again.");
@@ -332,7 +334,7 @@ export default function Wizard({
         <Section id="site" step={2} Icon={IconMapPin} title="Site details">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <Field label="Project name / Site name" error={errors.site?.projectName?.message}>
+              <Field label="Project name / Site name" required error={errors.site?.projectName?.message}>
                 <input className={inputCls} {...register("site.projectName")} />
               </Field>
             </div>
@@ -429,10 +431,19 @@ export default function Wizard({
               <div className="mb-1.5 text-sm font-semibold text-ink">
                 Type of defect <span className="text-status-rejected">*</span>
               </div>
-              <p className="mb-2 text-xs text-muted">Select all that apply — click a type to open its description box.</p>
+              <p className="mb-2 text-xs text-muted">Select all that apply - click a type to open its description box.</p>
               <DefectTypeChecks selected={defects} onToggle={toggleDefect} onDescribe={setDefectDescription} />
               {defectError && <p className="mt-1 text-xs text-status-rejected">{defectError}</p>}
             </div>
+
+            <Field label="Inverter fault / alarm history">
+              <InvoiceUpload
+                file={inverterImg}
+                onChange={setInverterImg}
+                kind="EVIDENCE"
+                cta="Upload inverter fault / alarm history (image, max 10MB)"
+              />
+            </Field>
 
             <div className="grid gap-4 rounded-2xl bg-surface p-5 sm:grid-cols-2">
               <Field label="When was the defect first noticed?" required error={errors.defect?.defectNoticedDate?.message}>
@@ -462,11 +473,27 @@ export default function Wizard({
           <div className="mb-1.5 text-sm font-semibold text-ink">
             Photos of the defect <span className="text-status-rejected">*</span>
           </div>
-          <p className="mb-3 text-xs text-muted">
-            At least one photo required. Close-ups of the damage and serial-number
-            labels speed up assessment. Videos welcome if they help.
-          </p>
+          <div className="mb-3 rounded-2xl bg-surface p-4">
+            <p className="text-xs font-semibold text-pe-navy">Please include photos of:</p>
+            <ul className="mt-2 flex flex-col gap-1.5">
+              {[
+                "Front full module image - all four corners",
+                "Back full module image - all four corners",
+                "The problem area - close-up",
+                "Module DC electrical values - Voc & Isc",
+                "Installation images - ACDB, DCDB, Inverter",
+              ].map((t) => (
+                <li key={t} className="flex items-start gap-2 text-xs text-muted">
+                  <span className="mt-0.5 shrink-0 leading-none text-pe-green" aria-hidden="true">•</span>
+                  <span>{t}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
           <EvidenceUpload files={evidence} onChange={setEvidence} />
+          <p className="mt-3 text-xs text-muted">
+            The more detailed your evidence, the faster we can analyse the defect and identify its root cause (RCA).
+          </p>
         </Section>
 
         {formError && <Alert kind="error">{formError}</Alert>}
@@ -602,7 +629,7 @@ function DefectTypeChecks({
                 onClick={() => setOpen(open === v ? null : v)}
                 className={`self-start text-xs font-semibold ${ok ? "text-pe-green" : "text-status-rejected"}`}
               >
-                {ok ? "✓ Description added — edit" : "+ Add description *"}
+                {ok ? "✓ Description added - edit" : "+ Add description *"}
               </button>
             )}
             {open === v && entry && (
@@ -638,7 +665,7 @@ function DefectTypeChecks({
 }
 
 const fmt = (v: unknown) => {
-  if (v === undefined || v === null || v === "") return "—";
+  if (v === undefined || v === null || v === "") return "-";
   if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}/.test(v)) return new Date(v).toLocaleDateString("en-IN");
   if (typeof v === "boolean") return v ? "Yes" : "No";
   return String(v).replaceAll("_", " ");

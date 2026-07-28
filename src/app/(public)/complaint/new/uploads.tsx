@@ -309,14 +309,22 @@ export function EvidenceUpload({
   );
 }
 
-/** Single-file invoice uploader. */
+/** Single-file uploader (invoice by default; pass kind="EVIDENCE" for a supporting image). */
 export function InvoiceUpload({
   file,
   onChange,
+  kind = "INVOICE",
+  accept,
+  cta,
 }: {
   file: AttachmentMeta | null;
   onChange: (file: AttachmentMeta | null) => void;
+  kind?: "INVOICE" | "EVIDENCE";
+  accept?: string;
+  cta?: string;
 }) {
+  const acceptAttr = accept ?? (kind === "EVIDENCE" ? IMAGE_TYPES.join(",") : INVOICE_TYPES.join(","));
+  const ctaText = cta ?? "Upload invoice copy (PDF or image, max 25MB)";
   const [pct, setPct] = useState<number | null>(null);
   const [error, setError] = useState<string>();
   const [storageOff, setStorageOff] = useState(false);
@@ -351,27 +359,27 @@ export function InvoiceUpload({
           onClick={() => inputRef.current?.click()}
           className="rounded-card border-2 border-dashed border-line bg-surface px-4 py-3 text-sm text-muted hover:border-pe-blue"
         >
-          Upload invoice copy (PDF or image, max 25MB)
+          {ctaText}
         </button>
       )}
       <input
         ref={inputRef}
         type="file"
-        accept={INVOICE_TYPES.join(",")}
+        accept={acceptAttr}
         className="hidden"
         onChange={async (e) => {
           const f = e.target.files?.[0];
           e.target.value = "";
           if (!f) return;
           setError(undefined);
-          const problem = validateFile(f, "INVOICE");
+          const problem = validateFile(f, kind);
           if (problem) {
             setError(problem);
             return;
           }
           setPct(0);
           try {
-            const meta = await uploadFile(f, "INVOICE", setPct);
+            const meta = await uploadFile(f, kind, setPct);
             onChange(meta);
           } catch (err) {
             if (err instanceof StorageOffError) setStorageOff(true);
