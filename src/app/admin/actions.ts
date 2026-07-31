@@ -7,7 +7,7 @@ import { getSession, type Session } from "@/lib/auth";
 import { sendEmail, statusUpdateEmail } from "@/lib/email";
 import { STATUS_LABEL } from "@/components/ui";
 
-const STATUSES = ["SUBMITTED", "UNDER_REVIEW", "IN_PROGRESS", "RESOLVED", "REJECTED"] as const;
+const STATUSES = ["SUBMITTED", "CLAIM_ACCEPTED", "UNDER_REVIEW", "VIRTUAL_VERIFICATION", "SITE_VISIT", "ENGINEER_VISIT_SCHEDULE", "CLAIM_UNDER_PROCESS", "RESOLVED", "REJECTED"] as const;
 type Status = (typeof STATUSES)[number];
 
 async function requireStaff(): Promise<Session> {

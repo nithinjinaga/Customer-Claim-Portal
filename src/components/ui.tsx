@@ -66,8 +66,12 @@ export function Alert({ kind, children }: { kind: "error" | "success" | "info"; 
 
 export const STATUS_LABEL: Record<string, string> = {
   SUBMITTED: "Submitted",
+  CLAIM_ACCEPTED: "Claim Accepted",
   UNDER_REVIEW: "Under Review",
-  IN_PROGRESS: "In Progress",
+  VIRTUAL_VERIFICATION: "Virtual Verification",
+  SITE_VISIT: "Site Visit",
+  ENGINEER_VISIT_SCHEDULE: "Engineer Visit Schedule",
+  CLAIM_UNDER_PROCESS: "Claim Under Process",
   RESOLVED: "Resolved",
   REJECTED: "Rejected",
 };
@@ -83,8 +87,12 @@ export const DEFECT_LABEL: Record<string, string> = {
 export function StatusBadge({ status }: { status: string }) {
   const color = {
     SUBMITTED: "bg-blue-50 text-status-submitted border-status-submitted/30",
+    CLAIM_ACCEPTED: "bg-teal-50 text-status-accepted border-status-accepted/30",
     UNDER_REVIEW: "bg-amber-50 text-status-review border-status-review/30",
-    IN_PROGRESS: "bg-violet-50 text-status-progress border-status-progress/30",
+    VIRTUAL_VERIFICATION: "bg-violet-50 text-status-virtual border-status-virtual/30",
+    SITE_VISIT: "bg-orange-50 text-status-site border-status-site/30",
+    ENGINEER_VISIT_SCHEDULE: "bg-sky-50 text-status-engineer border-status-engineer/30",
+    CLAIM_UNDER_PROCESS: "bg-purple-50 text-status-process border-status-process/30",
     RESOLVED: "bg-green-50 text-status-resolved border-status-resolved/30",
     REJECTED: "bg-red-50 text-status-rejected border-status-rejected/30",
   }[status] ?? "bg-surface text-muted border-line";
